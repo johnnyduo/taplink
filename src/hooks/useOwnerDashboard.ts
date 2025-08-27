@@ -10,6 +10,7 @@ export interface PaymentEvent {
   amount: bigint;
   nfcId: string;
   timestamp: bigint;
+  transactionHash?: string;
 }
 
 export interface DashboardStats {
@@ -62,6 +63,7 @@ export const useOwnerDashboard = () => {
         amount: log.args.amount as bigint,
         nfcId: log.args.nfcId as string,
         timestamp: BigInt(Math.floor(Date.now() / 1000)),
+        transactionHash: log.transactionHash,
       }));
 
       setRecentPayments(prev => [...newPayments, ...prev].slice(0, 20)); // Keep latest 20

@@ -15,7 +15,8 @@ import {
   ArrowUpRight,
   RefreshCw,
   Home,
-  ExternalLink
+  ExternalLink,
+  Copy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -105,6 +106,18 @@ const DashboardHome: React.FC = () => {
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const formatTransactionHash = (hash: string) => {
+    return `${hash.slice(0, 8)}...${hash.slice(-6)}`;
+  };
+
+  const getExplorerUrl = (hash: string) => {
+    return `https://kairos.kaiascan.io/tx/${hash}`;
+  };
+
+  const copyToClipboard = async (text: string) => {
+    await navigator.clipboard.writeText(text);
   };
 
   return (
@@ -228,9 +241,36 @@ const DashboardHome: React.FC = () => {
                     <p className="font-medium text-text-primary">
                       Product ID: {payment.productId}
                     </p>
-                    <p className="text-sm text-text-secondary">
-                      From: {formatAddress(payment.buyer)} • {formatTimestamp(payment.timestamp)}
-                    </p>
+                    <div className="flex items-center space-x-2 text-sm text-text-secondary">
+                      <span>From: {formatAddress(payment.buyer)}</span>
+                      <span>•</span>
+                      <span>{formatTimestamp(payment.timestamp)}</span>
+                      {payment.transactionHash && (
+                        <>
+                          <span>•</span>
+                          <div className="flex items-center space-x-1">
+                            <span>TX:</span>
+                            <button
+                              onClick={() => copyToClipboard(payment.transactionHash!)}
+                              className="text-accent-cyan hover:text-accent-cyan/80 transition-colors font-mono"
+                              title="Click to copy transaction hash"
+                            >
+                              {formatTransactionHash(payment.transactionHash)}
+                            </button>
+                            <Copy className="w-3 h-3 text-accent-cyan/60" />
+                            <a
+                              href={getExplorerUrl(payment.transactionHash)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-accent-cyan hover:text-accent-cyan/80 transition-colors"
+                              title="View on Kaia Explorer"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
                 

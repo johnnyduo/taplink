@@ -15,7 +15,9 @@ import {
   Wallet,
   Package,
   Home,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink,
+  Copy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +52,24 @@ const SalesFeed: React.FC = () => {
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 8)}...${address.slice(-6)}`;
+  };
+
+  const formatTransactionHash = (hash: string) => {
+    return `${hash.slice(0, 10)}...${hash.slice(-8)}`;
+  };
+
+  const getExplorerUrl = (hash: string) => {
+    return `https://kairos.kaiascan.io/tx/${hash}`;
+  };
+
+  const copyToClipboard = async (text: string, type: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // You could add a toast notification here if desired
+      console.log(`${type} copied to clipboard:`, text);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+    }
   };
 
   const getRelativeTime = (date: Date) => {
@@ -214,9 +234,31 @@ const SalesFeed: React.FC = () => {
                           Product: <span className="font-medium">{payment.productId}</span>
                         </p>
                         
-                        <p className="text-sm text-text-secondary">
+                        <p className="text-sm text-text-secondary mb-1">
                           From: <span className="font-mono">{formatAddress(payment.buyer)}</span>
                         </p>
+
+                        {payment.transactionHash && (
+                          <div className="flex items-center space-x-2 mt-2">
+                            <span className="text-xs text-text-tertiary">TX:</span>
+                            <button
+                              onClick={() => copyToClipboard(payment.transactionHash!, 'Transaction hash')}
+                              className="text-xs font-mono text-accent-cyan hover:text-accent-cyan/80 transition-colors"
+                              title="Click to copy full transaction hash"
+                            >
+                              {formatTransactionHash(payment.transactionHash)}
+                            </button>
+                            <a
+                              href={getExplorerUrl(payment.transactionHash)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1 hover:bg-white/10 rounded transition-colors"
+                              title="View on Kaia Explorer"
+                            >
+                              <ExternalLink className="w-3 h-3 text-accent-cyan" />
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -228,6 +270,10 @@ const SalesFeed: React.FC = () => {
                       <Badge variant="secondary">
                         Confirmed
                       </Badge>
+                      
+                      <p className="text-xs text-text-tertiary mt-1">
+                        {timeData.relative}
+                      </p>
                     </div>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,8 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Package, Tag, DollarSign, Warehouse, AlertCircle } from 'lucide-react';
+import { Upload, Package, Tag, DollarSign, Warehouse, AlertCircle, ExternalLink } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { PAYMENT_CONTRACT_CONFIG } from '@/lib/contracts/payment-abi';
+import { parseEther } from 'viem';
+import { toast } from 'sonner';
 
 export interface Product {
   productID: string;
@@ -73,8 +77,38 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   });
 
   const [newTag, setNewTag] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Contract interaction hooks
+  const { writeContract, data: hash, isPending: isContractPending } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const isSubmitting = isContractPending || isConfirming;
+
+  // Handle successful contract transaction
+  useEffect(() => {
+    if (isSuccess) {
+      toast.success('🎉 Product added to contract!', {
+        description: `${formData.name} is now available for NFC payments`
+      });
+      
+      // Create product object for local state
+      const newProduct = {
+        ...formData,
+        priceKRW: Number(formData.priceKRW),
+        cost: formData.cost ? Number(formData.cost) : undefined,
+        stock: Number(formData.stock),
+        threshold: Number(formData.threshold),
+        weight: formData.weight ? Number(formData.weight) : undefined,
+        batchID: formData.batchID || `BATCH${Date.now()}`,
+      };
+
+      onAdd(newProduct);
+      handleClose();
+    }
+  }, [isSuccess, formData, onAdd]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -98,28 +132,41 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     
     if (!validateForm()) return;
 
-    setIsSubmitting(true);
-    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const newProduct = {
-        ...formData,
-        priceKRW: Number(formData.priceKRW),
-        cost: formData.cost ? Number(formData.cost) : undefined,
-        stock: Number(formData.stock),
-        threshold: Number(formData.threshold),
-        weight: formData.weight ? Number(formData.weight) : undefined,
-        batchID: formData.batchID || `BATCH${Date.now()}`,
-      };
+      // Generate product ID from SKU
+      const productId = formData.sku.trim().toUpperCase();
+      const productName = formData.name.trim();
+      const priceKRW = Number(formData.priceKRW);
+      const stock = Number(formData.stock);
 
-      onAdd(newProduct);
-      handleClose();
-    } catch (error) {
+      // Convert KRW price to wei (18 decimals)
+      const priceInWei = parseEther(priceKRW.toString());
+
+      console.log('🏪 Adding product to contract:', {
+        productId,
+        name: productName,
+        price: `${priceKRW} KRW (${priceInWei.toString()} wei)`,
+        stock
+      });
+
+      // Call smart contract addProduct function
+      writeContract({
+        address: PAYMENT_CONTRACT_CONFIG.address,
+        abi: PAYMENT_CONTRACT_CONFIG.abi,
+        functionName: 'addProduct',
+        args: [
+          productId,
+          productName,
+          priceInWei,
+          BigInt(stock)
+        ],
+      } as any);
+
+    } catch (error: any) {
       console.error('Failed to add product:', error);
-    } finally {
-      setIsSubmitting(false);
+      toast.error('Failed to add product', {
+        description: error.message || 'Please check your inputs and try again'
+      });
     }
   };
 
@@ -145,7 +192,6 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     });
     setNewTag('');
     setErrors({});
-    setIsSubmitting(false);
     onClose();
   };
 
@@ -182,9 +228,43 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             Add New Product
           </DialogTitle>
           <DialogDescription>
-            Fill in the product details to add it to your inventory
+            Fill in the product details to add it to your inventory and deploy it to the smart contract
           </DialogDescription>
         </DialogHeader>
+
+        {/* Transaction Status Display */}
+        {isSubmitting && (
+          <GlassCard className="p-4 bg-accent-blue/10 border-accent-blue/30">
+            <div className="flex items-center space-x-3">
+              <div className="w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+              <div>
+                <p className="font-medium text-accent-blue">
+                  {isContractPending ? 'Submitting to blockchain...' : 'Confirming transaction...'}
+                </p>
+                <p className="text-sm text-text-secondary">
+                  {isContractPending 
+                    ? 'Please confirm the transaction in your wallet'
+                    : 'Waiting for blockchain confirmation...'
+                  }
+                </p>
+                {hash && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <span className="text-xs text-text-tertiary">TX:</span>
+                    <a
+                      href={`https://kairos.kaiascan.io/tx/${hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-accent-cyan hover:text-accent-cyan/80 font-mono flex items-center space-x-1"
+                    >
+                      <span>{hash.slice(0, 10)}...{hash.slice(-8)}</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </GlassCard>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
@@ -208,7 +288,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               </div>
 
               <div>
-                <Label htmlFor="sku">SKU *</Label>
+                <Label htmlFor="sku">SKU / Product ID *</Label>
                 <Input
                   id="sku"
                   value={formData.sku}
@@ -216,6 +296,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                   placeholder="TSHIRT-BLK-M"
                   className={errors.sku ? 'border-status-danger' : ''}
                 />
+                <p className="text-xs text-text-tertiary mt-1">Will be used as contract product identifier</p>
                 {errors.sku && <p className="text-status-danger text-sm mt-1">{errors.sku}</p>}
               </div>
 
@@ -278,6 +359,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                   step="100"
                   className={errors.priceKRW ? 'border-status-danger' : ''}
                 />
+                <p className="text-xs text-text-tertiary mt-1">Price in KRW tokens for NFC payments</p>
                 {errors.priceKRW && <p className="text-status-danger text-sm mt-1">{errors.priceKRW}</p>}
               </div>
 
@@ -305,6 +387,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                   min="0"
                   className={errors.stock ? 'border-status-danger' : ''}
                 />
+                <p className="text-xs text-text-tertiary mt-1">Available units for sale</p>
                 {errors.stock && <p className="text-status-danger text-sm mt-1">{errors.stock}</p>}
               </div>
 
@@ -454,9 +537,14 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               type="submit" 
               variant="primary"
               disabled={isSubmitting}
-              className="min-w-[120px]"
+              className="min-w-[140px]"
             >
-              {isSubmitting ? 'Adding...' : 'Add Product'}
+              {isContractPending 
+                ? 'Submitting...' 
+                : isConfirming 
+                  ? 'Confirming...' 
+                  : 'Add to Contract'
+              }
             </FuturisticButton>
           </DialogFooter>
         </form>
