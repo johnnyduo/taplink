@@ -151,85 +151,14 @@ const Index = () => {
         )}
       </GlassCard>
 
-      {/* Demo Wallet Status */}
-      <GlassCard className="p-6" glow={wallet.isConnected}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center",
-              wallet.isConnected ? "bg-status-success" : "bg-surface-700"
-            )}>
-              <Wallet className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-text-primary">Demo Wallet</h3>
-              <p className="text-sm text-text-secondary">
-                {wallet.isConnected ? wallet.shortAddress : "Not Connected"}
-              </p>
-            </div>
-          </div>
-          
-          <Badge 
-            variant={wallet.isConnected ? "default" : "destructive"} 
-            className="text-xs"
-          >
-            {wallet.isConnected ? "Connected" : "Connecting..."}
-          </Badge>
-        </div>
 
-        {wallet.isConnected && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Coins className="w-4 h-4 text-accent-cyan" />
-                <span className="text-sm text-text-secondary">KAIA Balance</span>
-              </div>
-              <span className="text-sm font-bold text-text-primary">
-                {parseFloat(wallet.kaiaBalance).toFixed(4)} KAIA
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Coins className="w-4 h-4 text-accent-emerald" />
-                <span className="text-sm text-text-secondary">KRW Balance</span>
-              </div>
-              <span className="text-sm font-bold text-text-primary">
-                {parseFloat(wallet.krwBalance).toFixed(2)} KRW
-              </span>
-            </div>
-
-            <div className="pt-3 border-t border-border-1">
-              <FuturisticButton
-                variant="secondary"
-                size="sm"
-                onClick={wallet.claimFaucet}
-                disabled={wallet.isLoading}
-                className="w-full text-sm"
-              >
-                {wallet.isLoading ? (
-                  <>
-                    <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Claiming...
-                  </>
-                ) : (
-                  <>
-                    <Coins className="w-4 h-4 mr-2" />
-                    Claim Test Tokens
-                  </>
-                )}
-              </FuturisticButton>
-            </div>
-          </div>
-        )}
-      </GlassCard>
 
       {/* Demo Products Preview */}
       <GlassCard className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-text-primary">Available Products</h3>
           <Badge variant="secondary" className="text-xs">
-            Demo Ready
+            Product Ready
           </Badge>
         </div>
         
