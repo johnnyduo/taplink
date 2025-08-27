@@ -5,6 +5,8 @@ import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Badge } from '@/components/ui/badge';
 import { KRWFaucet } from './KRWFaucet';
+import { FaucetSuccessModal } from './FaucetSuccessModal';
+import { useHardcodedWallet } from '@/hooks/useHardcodedWallet';
 import { toast } from 'sonner';
 import { 
   Wallet, 
@@ -24,6 +26,7 @@ export const ConnectWallet: React.FC = () => {
   const { isConnected, address } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { faucetSuccess, closeFaucetModal } = useHardcodedWallet();
   
   // Use wagmi's useBalance for KAIA balance
   const { data: kaiaBalance, isLoading: kaiaLoading, refetch: refetchKaia } = useBalance({
@@ -280,6 +283,13 @@ export const ConnectWallet: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Faucet Success Modal */}
+      <FaucetSuccessModal
+        isOpen={faucetSuccess.isOpen}
+        onClose={closeFaucetModal}
+        transactionHash={faucetSuccess.transactionHash}
+      />
     </GlassCard>
   );
 };

@@ -1,12 +1,26 @@
 import React from 'react';
+import { useReadContract, useAccount } from 'wagmi';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { useHardcodedWallet } from '@/hooks/useHardcodedWallet';
+import { KRW_CONTRACT_CONFIG } from '@/lib/contracts/krw-abi';
 import { Coins, Clock, Loader2 } from 'lucide-react';
 
 export const KRWFaucet: React.FC = () => {
+  const { address } = useAccount();
   const { isConnected, isLoading, canClaimFaucet, claimFaucet } = useHardcodedWallet();
   const [canClaim, setCanClaim] = React.useState(false);
   const [countdown, setCountdown] = React.useState<string>('');
+
+  // Get time until next claim
+  const { data: timeUntilNextClaim, refetch: refetchTimeUntil } = useReadContract({
+    ...KRW_CONTRACT_CONFIG,
+    functionName: 'timeUntilNextClaim',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address,
+      refetchInterval: 1000, // Update every second for countdown
+    }
+  });
 
   // Check faucet eligibility
   React.useEffect(() => {
@@ -29,6 +43,32 @@ export const KRWFaucet: React.FC = () => {
     return () => clearInterval(interval);
   }, [isConnected, canClaimFaucet]);
 
+  // Format countdown timer
+  React.useEffect(() => {
+    if (timeUntilNextClaim && !canClaim) {
+      const seconds = Number(timeUntilNextClaim);
+      if (seconds > 0) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = seconds % 60;
+        
+        if (hours > 0) {
+          setCountdown(`${hours}h ${minutes}m ${remainingSeconds}s`);
+        } else if (minutes > 0) {
+          setCountdown(`${minutes}m ${remainingSeconds}s`);
+        } else {
+          setCountdown(`${remainingSeconds}s`);
+        }
+      } else {
+        setCountdown('');
+        // Refresh eligibility when countdown reaches zero
+        refetchTimeUntil();
+      }
+    } else {
+      setCountdown('');
+    }
+  }, [timeUntilNextClaim, canClaim, refetchTimeUntil]);
+
   const handleClaimFaucet = async () => {
     if (!isConnected || !canClaim || isLoading) return;
     
@@ -39,6 +79,7 @@ export const KRWFaucet: React.FC = () => {
         try {
           const eligible = await canClaimFaucet();
           setCanClaim(eligible);
+          refetchTimeUntil();
         } catch (error) {
           console.error('Failed to refresh faucet status:', error);
         }

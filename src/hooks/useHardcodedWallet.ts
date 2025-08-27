@@ -3,31 +3,38 @@ import { hardcodedWallet } from '@/lib/hardcodedWallet';
 import { toast } from 'sonner';
 
 export interface HardcodedWalletState {
-  address: `0x${string}`;
-  shortAddress: string;
   kaiaBalance: string;
   krwBalance: string;
   isLoading: boolean;
   isConnected: boolean;
+  faucetSuccess: {
+    isOpen: boolean;
+    transactionHash: string;
+  };
 }
 
 export interface UseHardcodedWalletResult extends HardcodedWalletState {
-  connect: () => Promise<void>;
+  address: string;
+  shortAddress: string;
+  connect: () => void;
   disconnect: () => void;
   claimFaucet: () => Promise<void>;
-  processPayment: (productId: string, amount: string, merchantAddress: `0x${string}`) => Promise<`0x${string}`>;
   refreshBalances: () => Promise<void>;
+  processPayment: (productId: string, amount: string, merchantAddress: `0x${string}`) => Promise<`0x${string}`>;
   canClaimFaucet: () => Promise<boolean>;
+  closeFaucetModal: () => void;
 }
 
 export const useHardcodedWallet = (): UseHardcodedWalletResult => {
   const [state, setState] = useState<HardcodedWalletState>({
-    address: hardcodedWallet.address,
-    shortAddress: hardcodedWallet.getWalletInfo().shortAddress,
     kaiaBalance: '0',
     krwBalance: '0',
     isLoading: false,
     isConnected: false,
+    faucetSuccess: {
+      isOpen: false,
+      transactionHash: '',
+    },
   });
 
   // Auto-connect on mount
@@ -95,17 +102,18 @@ export const useHardcodedWallet = (): UseHardcodedWalletResult => {
     
     setState(prev => ({ ...prev, isLoading: true }));
     
-    const toastId = toast.loading('🚰 Claiming test tokens...', {
-      description: 'Getting 10,000 KRW tokens for testing'
-    });
-    
     try {
       const hash = await hardcodedWallet.claimFaucet();
       
-      toast.success('🎉 Test tokens claimed!', {
-        id: toastId,
-        description: `Transaction: ${hash.slice(0, 10)}...${hash.slice(-6)}`
-      });
+      // Show success modal instead of toast
+      setState(prev => ({ 
+        ...prev, 
+        isLoading: false,
+        faucetSuccess: {
+          isOpen: true,
+          transactionHash: hash,
+        }
+      }));
       
       // Wait and refresh balances
       setTimeout(() => {
@@ -115,13 +123,22 @@ export const useHardcodedWallet = (): UseHardcodedWalletResult => {
     } catch (error: any) {
       console.error('Failed to claim faucet:', error);
       toast.error('Failed to claim tokens', {
-        id: toastId,
         description: error.message
       });
-    } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
   }, [state.isConnected, refreshBalances]);
+
+  // Close faucet modal
+  const closeFaucetModal = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      faucetSuccess: {
+        isOpen: false,
+        transactionHash: '',
+      }
+    }));
+  }, []);
 
   // Process payment
   const processPayment = useCallback(async (
@@ -168,11 +185,14 @@ export const useHardcodedWallet = (): UseHardcodedWalletResult => {
 
   return {
     ...state,
+    address: hardcodedWallet.address,
+    shortAddress: hardcodedWallet.getWalletInfo().shortAddress,
     connect,
     disconnect,
     claimFaucet,
     processPayment,
     refreshBalances,
     canClaimFaucet,
+    closeFaucetModal,
   };
 };
