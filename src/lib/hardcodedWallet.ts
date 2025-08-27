@@ -226,28 +226,13 @@ export class HardcodedWallet {
   // Claim test tokens from faucet
   async claimFaucet(): Promise<`0x${string}`> {
     try {
-      const contractAddress = import.meta.env.VITE_KRW_CONTRACT_ADDRESS as `0x${string}`;
-      
-      if (!contractAddress) {
+      if (!KRW_CONTRACT_CONFIG.address) {
         throw new Error('KRW contract address not configured');
       }
 
       const hash = await this.walletClient.writeContract({
-        address: contractAddress,
-        abi: [
-          {
-            name: 'faucet',
-            type: 'function',
-            stateMutability: 'nonpayable',
-            inputs: [
-              { name: 'to', type: 'address' },
-              { name: 'amount', type: 'uint256' }
-            ],
-            outputs: []
-          }
-        ],
-        functionName: 'faucet',
-        args: [this.address, parseEther('10000')]
+        ...KRW_CONTRACT_CONFIG,
+        functionName: 'faucet'
       });
 
       console.log('🚰 Faucet claimed:', hash);
@@ -261,21 +246,10 @@ export class HardcodedWallet {
   // Check if wallet can claim faucet
   async canClaimFaucet(): Promise<boolean> {
     try {
-      const contractAddress = import.meta.env.VITE_KRW_CONTRACT_ADDRESS as `0x${string}`;
-      
-      if (!contractAddress) return false;
+      if (!KRW_CONTRACT_CONFIG.address) return false;
 
       const canClaim = await this.publicClient.readContract({
-        address: contractAddress,
-        abi: [
-          {
-            name: 'canClaimFaucet',
-            type: 'function',
-            stateMutability: 'view',
-            inputs: [{ name: 'user', type: 'address' }],
-            outputs: [{ name: '', type: 'bool' }]
-          }
-        ],
+        ...KRW_CONTRACT_CONFIG,
         functionName: 'canClaimFaucet',
         args: [this.address]
       });
