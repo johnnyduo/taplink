@@ -62,8 +62,8 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
     requiredAmount: string;
   } | null>(null);
 
-  // Set merchant address (in a real app, this would come from the product data or be configurable)
-  const MERCHANT_ADDRESS = "0x742d35Cc7Bd14532c5683e4b2C3b07e8eB9A5E4f"; // Example merchant address
+  // Set merchant address (use demo wallet address for testing)
+  const MERCHANT_ADDRESS = import.meta.env.VITE_DEMO_WALLET_ADDRESS || "0xa3cD8b433674017376d6E9Df72A78d80f6dEfDce";
 
   // Update step based on connection and payment state
   useEffect(() => {

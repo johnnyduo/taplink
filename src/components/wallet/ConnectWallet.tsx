@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
-import { useConnect, useDisconnect, useAccount, useBalance, useReadContract, useWriteContract } from 'wagmi';
-import { formatEther, parseEther } from 'viem';
+import { useConnect, useDisconnect, useAccount, useBalance, useReadContract } from 'wagmi';
+import { formatEther } from 'viem';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Badge } from '@/components/ui/badge';
@@ -17,8 +17,7 @@ import {
   Shield,
   TrendingUp,
   Globe,
-  CheckCircle,
-  Coins
+  CheckCircle
 } from 'lucide-react';
 
 export const ConnectWallet: React.FC = () => {
@@ -59,59 +58,6 @@ export const ConnectWallet: React.FC = () => {
   // Local state
   const [copied, setCopied] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(false);
-  const [isClaimingFaucet, setIsClaimingFaucet] = React.useState(false);
-
-  // KRW Faucet contract interaction
-  const { writeContract: claimFaucet } = useWriteContract();
-
-  // Claim faucet function
-  const handleClaimFaucet = useCallback(async () => {
-    if (!address) return;
-    
-    setIsClaimingFaucet(true);
-    const toastId = toast.loading('🚰 Claiming test tokens...', {
-      description: 'Getting 10,000 KRW tokens for testing'
-    });
-    
-    try {
-      claimFaucet({
-        address: import.meta.env.VITE_KRW_CONTRACT_ADDRESS as `0x${string}`,
-        abi: [
-          {
-            name: 'faucet',
-            type: 'function',
-            stateMutability: 'nonpayable',
-            inputs: [
-              { name: 'to', type: 'address' },
-              { name: 'amount', type: 'uint256' }
-            ],
-            outputs: []
-          }
-        ],
-        functionName: 'faucet',
-        args: [address, parseEther('10000')]
-      });
-      
-      toast.success('🎉 Test tokens claimed!', {
-        id: toastId,
-        description: 'Tokens will appear shortly'
-      });
-      
-      // Refresh balances after a delay
-      setTimeout(() => {
-        refreshBalances();
-      }, 3000);
-      
-    } catch (error: any) {
-      console.error('Failed to claim faucet:', error);
-      toast.error('Failed to claim tokens', {
-        id: toastId,
-        description: error.message
-      });
-    } finally {
-      setIsClaimingFaucet(false);
-    }
-  }, [address, claimFaucet, refreshBalances]);
 
   // Auto-connect to our hardcoded wallet on mount
   React.useEffect(() => {
@@ -312,18 +258,9 @@ export const ConnectWallet: React.FC = () => {
 
           {/* Main Action Buttons - Compact */}
           <div className="flex space-x-2">
-            <FuturisticButton 
-              variant="secondary" 
-              size="sm"
-              onClick={handleClaimFaucet}
-              disabled={isClaimingFaucet}
-              className="flex-1 h-9"
-            >
-              <Coins className="w-4 h-4 mr-1.5 flex-shrink-0" />
-              <span className="text-sm">
-                {isClaimingFaucet ? 'Claiming...' : 'Claim KRW'}
-              </span>
-            </FuturisticButton>
+            <div className="flex-1">
+              <KRWFaucet />
+            </div>
             <FuturisticButton 
               variant="ghost" 
               size="sm"

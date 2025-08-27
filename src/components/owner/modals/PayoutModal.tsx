@@ -233,7 +233,7 @@ export const PayoutModal: React.FC<PayoutModalProps> = ({
                   onChange={(e) => handleInputChange('destination', e.target.value)}
                   placeholder={
                     formData.method === 'bank_transfer' ? '1234-5678-9012-3456' :
-                    formData.method === 'crypto' ? '0x742d35Cc6634C0532925a3b8D404' :
+                    formData.method === 'crypto' ? '0xa3cD8b433674017376d6E9Df72A78d80f6dEfDce' :
                     'user@example.com'
                   }
                   className={errors.destination ? 'border-status-danger' : ''}

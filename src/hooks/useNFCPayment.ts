@@ -51,8 +51,14 @@ export const useNFCPayment = (): UseNFCPaymentResult => {
         walletAddress: address,
       });
 
-      // Use demo merchant address (replace with actual merchant from NFC data if available)
-      const merchantAddress = '0x742d35Cc6634C0532925a3b8D404Cb7e3C9A7C62' as `0x${string}`;
+      // Use the demo wallet address as merchant for testing (or get from productData if available)
+      const merchantAddress = (import.meta.env.VITE_DEMO_WALLET_ADDRESS || '0xa3cD8b433674017376d6E9Df72A78d80f6dEfDce') as `0x${string}`;
+      
+      console.log('💰 Payment details:', {
+        merchantAddress,
+        paymentContract: productData.contractAddress,
+        amount: priceInKaia
+      });
 
       // Process the payment
       const hash = await walletProcessPayment(
