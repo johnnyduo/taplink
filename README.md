@@ -478,24 +478,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - ✅ Private use permitted
 - ❗ Must include license and copyright notice
 
-## 📞 Support & Community
-
-### Technical Support
-- **Documentation**: Comprehensive guides and API references
-- **Community Forum**: Developer discussions and Q&A
-- **Discord**: Real-time chat with the development team
-- **Email**: technical-support@taplink.dev
-
-### Business Inquiries
-- **Partnerships**: partnerships@taplink.dev
-- **Enterprise**: enterprise@taplink.dev
-- **Licensing**: licensing@taplink.dev
-
-### Social Media
-- **Twitter**: [@TapLinkDev](https://twitter.com/TapLinkDev)
-- **LinkedIn**: [TapLink Technologies](https://linkedin.com/company/taplink)
-- **GitHub**: [@johnnyduo](https://github.com/johnnyduo)
-
 ---
 
 <div align="center">
