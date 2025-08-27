@@ -1,48 +1,137 @@
 import React from 'react';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from 'wagmi';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
-import { useWallet } from '@/hooks/useWallet';
-import { Coins, ExternalLink } from 'lucide-react';
+import { KRW_CONTRACT_CONFIG } from '@/lib/contracts/krw-abi';
+import { Coins, Clock, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const KRWFaucet: React.FC = () => {
-  const { address, isConnected } = useWallet();
+  const { address, isConnected } = useAccount();
+  const [countdown, setCountdown] = React.useState<string>('');
+  
+  // Check if user can claim from faucet
+  const { data: canClaim } = useReadContract({
+    ...KRW_CONTRACT_CONFIG,
+    functionName: 'canClaimFaucet',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && isConnected,
+      refetchInterval: 5000,
+    },
+  });
 
-  const openContractOnExplorer = () => {
-    const contractAddress = import.meta.env.VITE_KRW_CONTRACT_ADDRESS;
-    const explorerUrl = `https://kairos.kaiascan.io/account/${contractAddress}`;
-    window.open(explorerUrl, '_blank');
+  // Get time until next claim
+  const { data: timeUntilNextClaim } = useReadContract({
+    ...KRW_CONTRACT_CONFIG,
+    functionName: 'timeUntilNextClaim',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && isConnected && !canClaim,
+      refetchInterval: 1000, // Update every second for countdown
+    },
+  });
+
+  const { writeContract, data: hash, isPending } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  // Format countdown timer
+  React.useEffect(() => {
+    if (timeUntilNextClaim && !canClaim) {
+      const seconds = Number(timeUntilNextClaim);
+      if (seconds > 0) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = seconds % 60;
+        
+        if (hours > 0) {
+          setCountdown(`${hours}h ${minutes}m ${remainingSeconds}s`);
+        } else if (minutes > 0) {
+          setCountdown(`${minutes}m ${remainingSeconds}s`);
+        } else {
+          setCountdown(`${remainingSeconds}s`);
+        }
+      } else {
+        setCountdown('');
+      }
+    } else {
+      setCountdown('');
+    }
+  }, [timeUntilNextClaim, canClaim]);
+
+  const handleClaimFaucet = async () => {
+    if (!address) return;
+
+    try {
+      toast.info('🚀 Claiming KRW tokens...', {
+        description: 'Please confirm the transaction in your wallet'
+      });
+
+      writeContract({
+        address: KRW_CONTRACT_CONFIG.address,
+        abi: KRW_CONTRACT_CONFIG.abi,
+        functionName: 'faucet',
+      } as any);
+      
+    } catch (error: any) {
+      console.error('Faucet claim error:', error);
+      
+      if (error.message?.includes('User rejected')) {
+        toast.error('Transaction cancelled by user');
+      } else if (error.message?.includes('Faucet cooldown not met')) {
+        toast.error('⏰ Faucet cooldown not met. Please wait before claiming again.');
+      } else {
+        toast.error('Failed to claim tokens', {
+          description: error.message || 'Please try again later'
+        });
+      }
+    }
   };
+
+  React.useEffect(() => {
+    if (isSuccess && hash) {
+      toast.success('🎉 KRW tokens claimed successfully!', {
+        description: `Transaction: ${hash.slice(0, 10)}...${hash.slice(-6)}`
+      });
+    }
+  }, [isSuccess, hash]);
 
   if (!isConnected) {
     return null;
   }
 
   return (
-    <div className="p-3 bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-lg border border-emerald-500/20">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2">
-          <Coins className="w-4 h-4 text-emerald-400" />
-          <div>
-            <h3 className="text-xs font-medium text-text-primary">KRW Test Faucet</h3>
-            <p className="text-xs text-text-tertiary">Get test KRW tokens</p>
+    <FuturisticButton
+      onClick={handleClaimFaucet}
+      disabled={!canClaim || isPending || isConfirming}
+      className={`w-full h-12 transition-all duration-300 ${
+        canClaim 
+          ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/50 hover:border-emerald-400/70 text-emerald-400 hover:text-emerald-300' 
+          : 'bg-surface-700/50 border-surface-600/50 text-text-tertiary cursor-not-allowed'
+      }`}
+    >
+      {isPending || isConfirming ? (
+        <>
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <span className="font-medium">{isPending ? 'Claiming...' : 'Confirming...'}</span>
+        </>
+      ) : canClaim ? (
+        <>
+          <Coins className="w-4 h-4 mr-2 flex-shrink-0" />
+          <span className="font-medium">Claim ₩10,000 KRW</span>
+        </>
+      ) : (
+        <>
+          <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
+          <div className="flex flex-col">
+            <span className="font-medium text-xs">Cooldown Active</span>
+            {countdown && (
+              <span className="text-xs text-text-tertiary">{countdown}</span>
+            )}
           </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <FuturisticButton
-          variant="secondary"
-          size="sm"
-          onClick={openContractOnExplorer}
-          className="w-full text-xs"
-        >
-          <ExternalLink className="w-3 h-3 mr-2 flex-shrink-0" />
-          <span className="leading-none">View Contract on Explorer</span>
-        </FuturisticButton>
-        
-        <p className="text-xs text-text-tertiary text-center">
-          Use contract methods directly on Kaiascan to claim test tokens
-        </p>
-      </div>
-    </div>
+        </>
+      )}
+    </FuturisticButton>
   );
 };
