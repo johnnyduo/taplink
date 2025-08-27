@@ -150,7 +150,7 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
       }
 
       resetPayment();
-      await processPayment(productData, MERCHANT_ADDRESS as `0x${string}`);
+      await processPayment(productData);
     } catch (err: any) {
       console.error('Payment failed:', err);
       if (onError) {
