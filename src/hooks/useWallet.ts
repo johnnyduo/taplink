@@ -1,6 +1,6 @@
 import { useAccount, useBalance, useDisconnect, useReadContract } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
-import { KRW_CONTRACT_CONFIG } from '@/lib/contracts/krw-abi';
+import { KRW_CONTRACT_CONFIG } from '@/lib/contracts';
 import { formatUnits } from 'viem';
 
 export const useWallet = () => {

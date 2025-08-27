@@ -4,13 +4,16 @@ pragma solidity ^0.8.26;
 import "KRW.sol";
 
 /**
- * @title TapLinkPayment
- * @dev Simple payment contract for NFC tap-to-pay functionality
+ * @title TapLinkPayment V2
+ * @dev Simple but secure payment contract for NFC tap-to-pay POC
  * @author TapLink Team
  */
-contract TapLinkPayment {
+contract TapLinkPaymentV2 {
     TestKRW public immutable krwToken;
     address public immutable shopOwner;
+    
+    // Simple pause mechanism
+    bool public paused;
     
     struct Product {
         string name;
@@ -25,13 +28,17 @@ contract TapLinkPayment {
         uint256 amount;
         uint256 timestamp;
         string nfcId;
+        bool refunded;  // Added for refunds
     }
     
     mapping(string => Product) public products;
     mapping(uint256 => Payment) public payments;
+    mapping(string => bool) public usedNfcIds;  // Prevent NFC replay
     uint256 public paymentCounter;
     
+    // Added missing events
     event ProductAdded(string indexed productId, string name, uint256 price);
+    event ProductDeactivated(string indexed productId);
     event PaymentProcessed(
         uint256 indexed paymentId,
         address indexed buyer,
@@ -39,10 +46,17 @@ contract TapLinkPayment {
         uint256 amount,
         string nfcId
     );
+    event PaymentRefunded(uint256 indexed paymentId, address indexed buyer, uint256 amount);
     event StockUpdated(string indexed productId, uint256 newStock);
+    event EmergencyPause(bool isPaused);
     
     modifier onlyShopOwner() {
         require(msg.sender == shopOwner, "Only shop owner");
+        _;
+    }
+    
+    modifier whenNotPaused() {
+        require(!paused, "Contract is paused");
         _;
     }
     
@@ -52,7 +66,15 @@ contract TapLinkPayment {
     }
     
     /**
-     * @dev Add or update a product
+     * @dev Emergency pause toggle
+     */
+    function togglePause() external onlyShopOwner {
+        paused = !paused;
+        emit EmergencyPause(paused);
+    }
+    
+    /**
+     * @dev Add or update a product with validation
      */
     function addProduct(
         string memory productId,
@@ -60,6 +82,11 @@ contract TapLinkPayment {
         uint256 price,
         uint256 stock
     ) external onlyShopOwner {
+        // Simple validation
+        require(bytes(productId).length > 0, "Invalid product ID");
+        require(bytes(name).length > 0, "Invalid product name");
+        require(price > 0, "Price must be greater than 0");
+        
         products[productId] = Product({
             name: name,
             price: price,
@@ -71,50 +98,72 @@ contract TapLinkPayment {
     }
     
     /**
-     * @dev Process NFC tap payment
+     * @dev Process NFC tap payment - SECURED VERSION
      */
     function tapToPay(
         string memory productId,
         string memory nfcId
-    ) external {
+    ) external whenNotPaused {
+        // Input validation
+        require(bytes(productId).length > 0, "Invalid product ID");
+        require(bytes(nfcId).length > 0, "Invalid NFC ID");
+        
+        // Prevent NFC replay attack
+        require(!usedNfcIds[nfcId], "NFC already used");
+        
         Product storage product = products[productId];
-        require(product.active, "Product not found or inactive");
+        require(product.active, "Product not active");
         require(product.stock > 0, "Out of stock");
         
         uint256 amount = product.price;
+        require(krwToken.balanceOf(msg.sender) >= amount, "Insufficient balance");
         
-        // Check buyer has enough balance
-        require(krwToken.balanceOf(msg.sender) >= amount, "Insufficient KRW balance");
-        
-        // Transfer KRW from buyer to shop owner
-        require(
-            krwToken.transferFrom(msg.sender, shopOwner, amount),
-            "Payment failed - check allowance"
-        );
-        
-        // Update stock
+        // UPDATE STATE FIRST (prevent reentrancy)
+        usedNfcIds[nfcId] = true;
         product.stock--;
         
-        // Record payment
-        payments[paymentCounter] = Payment({
+        uint256 currentPaymentId = paymentCounter;
+        payments[currentPaymentId] = Payment({
             buyer: msg.sender,
             productId: productId,
             amount: amount,
             timestamp: block.timestamp,
-            nfcId: nfcId
+            nfcId: nfcId,
+            refunded: false
         });
+        paymentCounter++;
         
-        emit PaymentProcessed(
-            paymentCounter,
-            msg.sender,
-            productId,
-            amount,
-            nfcId
+        // EXTERNAL CALL LAST
+        require(
+            krwToken.transferFrom(msg.sender, shopOwner, amount),
+            "Payment failed"
         );
         
+        emit PaymentProcessed(currentPaymentId, msg.sender, productId, amount, nfcId);
         emit StockUpdated(productId, product.stock);
+    }
+    
+    /**
+     * @dev Simple refund mechanism
+     */
+    function refundPayment(uint256 paymentId) external onlyShopOwner {
+        Payment storage payment = payments[paymentId];
+        require(payment.buyer != address(0), "Payment not found");
+        require(!payment.refunded, "Already refunded");
         
-        paymentCounter++;
+        payment.refunded = true;
+        
+        // Refund from shop owner to buyer
+        require(
+            krwToken.transferFrom(shopOwner, payment.buyer, payment.amount),
+            "Refund failed"
+        );
+        
+        // Return stock
+        products[payment.productId].stock++;
+        
+        emit PaymentRefunded(paymentId, payment.buyer, payment.amount);
+        emit StockUpdated(payment.productId, products[payment.productId].stock);
     }
     
     /**
@@ -141,6 +190,7 @@ contract TapLinkPayment {
         external 
         onlyShopOwner 
     {
+        require(bytes(productId).length > 0, "Invalid product ID");
         require(products[productId].active, "Product not found");
         products[productId].stock = newStock;
         emit StockUpdated(productId, newStock);
@@ -155,6 +205,7 @@ contract TapLinkPayment {
     {
         require(products[productId].active, "Product already inactive");
         products[productId].active = false;
+        emit ProductDeactivated(productId);
     }
     
     /**

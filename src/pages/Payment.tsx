@@ -2,8 +2,7 @@ import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseUnits } from 'viem';
-import { PAYMENT_CONTRACT_CONFIG } from '@/lib/contracts/payment-abi';
-import { KRW_CONTRACT_CONFIG } from '@/lib/contracts/krw-abi';
+import { TAPLINK_PAYMENT_V2_CONFIG, KRW_CONTRACT_CONFIG } from '@/lib/contracts';
 import { useWallet } from '@/hooks/useWallet';
 import { GlassCard } from '@/components/ui/glass-card';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
@@ -39,14 +38,11 @@ export const PaymentPage: React.FC = () => {
   const [paymentStep, setPaymentStep] = React.useState<'loading' | 'confirm' | 'approving' | 'paying' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string>('');
 
-  // Get product information
+  // Get product info from contract
   const { data: productData, isLoading: productLoading } = useReadContract({
-    ...PAYMENT_CONTRACT_CONFIG,
+    ...TAPLINK_PAYMENT_V2_CONFIG,
     functionName: 'getProduct',
     args: [productId],
-    query: {
-      enabled: !!productId,
-    },
   });
 
   // Contract interactions
@@ -97,8 +93,8 @@ export const PaymentPage: React.FC = () => {
       setPaymentStep('paying');
       // Auto-process payment after approval
       processPayment({
-        address: PAYMENT_CONTRACT_CONFIG.address,
-        abi: PAYMENT_CONTRACT_CONFIG.abi,
+        address: TAPLINK_PAYMENT_V2_CONFIG.address,
+        abi: TAPLINK_PAYMENT_V2_CONFIG.abi,
         functionName: 'tapToPay',
         args: [productId, nfcId],
       } as any);
@@ -133,7 +129,7 @@ export const PaymentPage: React.FC = () => {
         address: KRW_CONTRACT_CONFIG.address,
         abi: KRW_CONTRACT_CONFIG.abi,
         functionName: 'approve',
-        args: [PAYMENT_CONTRACT_CONFIG.address, parseUnits(priceInKRW.toString(), 18)],
+        args: [TAPLINK_PAYMENT_V2_CONFIG.address, parseUnits(priceInKRW.toString(), 18)],
       } as any);
       
     } catch (error: any) {

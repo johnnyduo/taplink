@@ -52,7 +52,7 @@ deployments/local/
 hardhat-shorthand
 
 # Foundry
-lib/
+foundry/lib/
 broadcast/
 .forge-cache/
 
@@ -123,5 +123,3 @@ storybook-static/
 
 # Web3 dApp specific
 public/contracts/
-src/contracts/abis/
-src/types/typechain/
