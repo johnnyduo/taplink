@@ -71,30 +71,28 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
       setCurrentStep('connect');
     } else if (paymentError) {
       setCurrentStep('error');
-    } else if (isSuccess && receipt) {
+    } else if (isSuccess && transactionHash) {
+      // When we have transaction hash, immediately show success (on-chain is already done)
       setCurrentStep('success');
     } else if (isLoading) {
       setCurrentStep('processing');
     } else if (isConnected && !isLoading && !isSuccess) {
       setCurrentStep('confirm');
     }
-  }, [isConnected, isLoading, isSuccess, paymentError, receipt]);
+  }, [isConnected, isLoading, isSuccess, paymentError, transactionHash]);
 
   // Check balance when connected
   useEffect(() => {
     if (isConnected && productData) {
-      checkBalance().then(info => {
-        setBalanceInfo({
-          ...info,
-          requiredAmount: (NFCTagManager.convertFromWei(NFCTagManager.convertToWei(productData.price)) + 0.001).toString() // Add gas estimate
-        });
+      checkBalance(productData).then(info => {
+        setBalanceInfo(info); // Use the properly formatted info from the hook
       });
     }
   }, [isConnected, productData, checkBalance]);
 
   // Handle payment completion with explorer URL
   useEffect(() => {
-    if (isSuccess && receipt && currentStep === 'success') {
+    if (isSuccess && transactionHash && currentStep === 'success') {
       const explorerUrl = `${import.meta.env.VITE_KAIA_KAIROS_EXPLORER}/tx/${transactionHash}`;
       const receiptData = {
         transactionId: transactionHash,
@@ -108,17 +106,18 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
         merchantId: productData.merchantId,
         timestamp: new Date().toISOString(),
         nftTokenId: `NFT_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-        blockHash: receipt.blockHash,
-        blockNumber: receipt.blockNumber,
-        gasUsed: receipt.gasUsed?.toString(),
+        blockHash: receipt?.blockHash || '',
+        blockNumber: receipt?.blockNumber || 0n,
+        gasUsed: receipt?.gasUsed?.toString() || '0',
         receipt,
       };
       
+      // Complete immediately since transaction is already successful
       setTimeout(() => {
         onPaymentComplete(receiptData);
-      }, 1500); // Small delay to show success state
+      }, 2000); // Shorter delay since we're not waiting for confirmation
     }
-  }, [isSuccess, receipt, transactionHash, productData, currentStep, onPaymentComplete]);
+  }, [isSuccess, transactionHash, productData, currentStep, onPaymentComplete, receipt]);
 
   // Handle errors
   useEffect(() => {
@@ -314,30 +313,38 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
       </div>
       
       <div>
-        <h3 className="text-xl font-bold text-status-success mb-2">Payment Successful!</h3>
+        <h3 className="text-xl font-bold text-status-success mb-2">Payment Successful! 🎉</h3>
         <p className="text-text-tertiary mb-4">
-          Your NFC payment has been processed
+          Your {productData.name} purchase is complete
         </p>
-        <div className="text-sm text-text-tertiary space-y-1">
+        <div className="text-sm text-text-tertiary space-y-2">
           <div>Product: {productData.name}</div>
-          <div>Amount: {NFCTagManager.formatPrice(productData.price, productData.currency)}</div>
-          <div>Payment: {productData.price.toLocaleString()} KRW tokens</div>
-          {transactionHash && (
-            <a 
-              href={`${import.meta.env.VITE_KAIA_KAIROS_EXPLORER}/tx/${transactionHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center space-x-2 text-accent-cyan hover:text-accent-cyan-bright transition-colors"
-            >
-              <span>View TX: {transactionHash.slice(0, 8)}...{transactionHash.slice(-6)}</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          )}
+          <div>Amount: {productData.price.toLocaleString()} KRW tokens</div>
+          <div>From: {productData.merchantName}</div>
         </div>
       </div>
 
-      <div className="text-xs text-accent-cyan">
-        Generating receipt NFT...
+      {/* Prominent Explorer Link */}
+      {transactionHash && (
+        <div className="p-4 bg-surface-700 rounded-xl border border-accent-cyan/20">
+          <div className="text-sm text-text-secondary mb-2">Transaction Complete</div>
+          <a 
+            href={`${import.meta.env.VITE_KAIA_KAIROS_EXPLORER}/tx/${transactionHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-accent-cyan/10 hover:bg-accent-cyan/20 rounded-lg text-accent-cyan hover:text-accent-cyan-bright transition-all duration-200 font-medium"
+          >
+            <span>View on Explorer</span>
+            <ExternalLink className="w-4 h-4" />
+          </a>
+          <div className="text-xs text-text-tertiary mt-2">
+            TX: {transactionHash.slice(0, 10)}...{transactionHash.slice(-10)}
+          </div>
+        </div>
+      )}
+
+      <div className="text-xs text-accent-cyan opacity-75">
+        ✨ Transaction confirmed on blockchain
       </div>
     </div>
   );

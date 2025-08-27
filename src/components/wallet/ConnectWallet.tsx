@@ -163,7 +163,7 @@ export const ConnectWallet: React.FC = () => {
                 Kaia Testnet
               </p>
               <Badge variant="outline" className="text-xs px-1.5 py-0 border-accent-cyan/30 text-accent-cyan">
-                Demo
+                Live
               </Badge>
             </div>
           </div>

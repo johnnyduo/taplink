@@ -13,7 +13,7 @@ export interface PaymentState {
 export interface UseNFCPaymentResult extends PaymentState {
   processPayment: (productData: NFCProductData) => Promise<void>;
   reset: () => void;
-  checkBalance: () => Promise<{ hasEnoughBalance: boolean; currentBalance: string; requiredAmount: string }>;
+  checkBalance: (productData?: NFCProductData) => Promise<{ hasEnoughBalance: boolean; currentBalance: string; requiredAmount: string }>;
 }
 
 export const useNFCPayment = (): UseNFCPaymentResult => {
