@@ -55,9 +55,9 @@ const Index = () => {
               {/* Owner Dashboard Access */}
               <div className="text-center">
                 <Link to="/owner">
-                  <FuturisticButton variant="ghost" size="sm" className="btn-aligned">
-                    <Settings className="w-4 h-4 mr-2" />
-                    <span>Shop Owner Dashboard</span>
+                  <FuturisticButton variant="ghost" size="sm">
+                    <Settings className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <span className="leading-none">Shop Owner Dashboard</span>
                   </FuturisticButton>
                 </Link>
               </div>

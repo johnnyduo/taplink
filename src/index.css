@@ -227,6 +227,18 @@
     flex-shrink: 0;
   }
 
+  .wallet-connect-btn {
+    @apply inline-flex items-center justify-center;
+    line-height: 1 !important;
+    align-items: center !important;
+    gap: 0.5rem;
+  }
+
+  .wallet-connect-btn > * {
+    line-height: 1 !important;
+    vertical-align: middle;
+  }
+
   .icon-text-aligned {
     @apply inline-flex items-center;
     line-height: 1;

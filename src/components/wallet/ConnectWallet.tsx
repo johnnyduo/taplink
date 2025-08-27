@@ -3,6 +3,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Badge } from '@/components/ui/badge';
+import { KRWFaucet } from './KRWFaucet';
 import { 
   Wallet, 
   ChevronDown, 
@@ -23,6 +24,8 @@ export const ConnectWallet: React.FC = () => {
     networkName,
     balance,
     balanceLoading,
+    krwBalance,
+    krwBalanceLoading,
     isKaiaTestnet,
     connect,
     disconnect,
@@ -77,9 +80,9 @@ export const ConnectWallet: React.FC = () => {
           <FuturisticButton 
             variant="primary" 
             onClick={connect}
-            className="w-full bg-gradient-to-r from-primary to-accent-cyan hover:from-primary/90 hover:to-accent-cyan/90 transition-all duration-300 btn-aligned"
+            className="w-full bg-gradient-to-r from-primary to-accent-cyan hover:from-primary/90 hover:to-accent-cyan/90 transition-all duration-300 wallet-connect-btn"
           >
-            <Wallet className="w-4 h-4 mr-2" />
+            <Wallet className="w-4 h-4 mr-2 flex-shrink-0" />
             <span>Connect Wallet</span>
           </FuturisticButton>
 
@@ -156,44 +159,72 @@ export const ConnectWallet: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center justify-between p-3 bg-surface-800/30 rounded-lg mb-3">
-        <div>
-          <p className="text-xs text-text-secondary">Balance</p>
-          <p className="text-lg font-bold text-text-primary">
-            {balanceLoading 
-              ? '...' 
-              : balance 
-              ? `${balance.formatted} ${balance.symbol}` 
-              : '0.0000 KAIA'
-            }
-          </p>
+      <div className="space-y-3 mb-3">
+        {/* KAIA Balance */}
+        <div className="flex items-center justify-between p-3 bg-surface-800/30 rounded-lg">
+          <div>
+            <p className="text-xs text-text-secondary">KAIA Balance</p>
+            <p className="text-lg font-bold text-text-primary">
+              {balanceLoading 
+                ? '...' 
+                : balance 
+                ? `${balance.formatted} ${balance.symbol}` 
+                : '0.0000 KAIA'
+              }
+            </p>
+          </div>
+          <div className="flex items-center space-x-1 text-status-success">
+            <TrendingUp className="w-4 h-4" />
+            <span className="text-sm font-medium">Native</span>
+          </div>
         </div>
-        <div className="flex items-center space-x-1 text-status-success">
-          <TrendingUp className="w-4 h-4" />
-          <span className="text-sm font-medium">Ready</span>
+
+        {/* KRW Balance */}
+        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-lg border border-emerald-500/20">
+          <div>
+            <p className="text-xs text-emerald-400">KRW Stable Balance</p>
+            <p className="text-lg font-bold text-text-primary">
+              {krwBalanceLoading 
+                ? '...' 
+                : krwBalance 
+                ? `₩${krwBalance.formatted}` 
+                : '₩0'
+              }
+            </p>
+            <p className="text-xs text-text-tertiary">
+              Contract: {import.meta.env.VITE_KRW_CONTRACT_ADDRESS?.slice(0, 6)}...{import.meta.env.VITE_KRW_CONTRACT_ADDRESS?.slice(-4)}
+            </p>
+          </div>
+          <div className="flex items-center space-x-1 text-emerald-400">
+            <CheckCircle className="w-4 h-4" />
+            <span className="text-sm font-medium">Stable</span>
+          </div>
         </div>
       </div>
 
-      <div className="flex space-x-2">
+      <div className="flex space-x-2 mb-4">
         <FuturisticButton 
           variant="secondary" 
           size="sm"
           onClick={connect}
-          className="flex-1 btn-aligned"
+          className="flex-1"
         >
-          <Wallet className="w-4 h-4 mr-2" />
-          <span>Manage</span>
+          <Wallet className="w-4 h-4 mr-2 flex-shrink-0" />
+          <span className="leading-none">Manage</span>
         </FuturisticButton>
         <FuturisticButton 
           variant="ghost" 
           size="sm"
           onClick={() => disconnect()}
-          className="flex-1 text-status-danger hover:bg-status-danger/10 btn-aligned"
+          className="flex-1 text-status-danger hover:bg-status-danger/10"
         >
-          <LogOut className="w-4 h-4 mr-2" />
-          <span>Disconnect</span>
+          <LogOut className="w-4 h-4 mr-2 flex-shrink-0" />
+          <span className="leading-none">Disconnect</span>
         </FuturisticButton>
       </div>
+
+      {/* KRW Faucet */}
+      <KRWFaucet />
     </GlassCard>
   );
 };

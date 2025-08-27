@@ -1,11 +1,24 @@
-import { useAccount, useBalance, useDisconnect } from 'wagmi';
+import { useAccount, useBalance, useDisconnect, useReadContract } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
+import { KRW_CONTRACT_CONFIG } from '@/lib/contracts/krw-abi';
+import { formatUnits } from 'viem';
 
 export const useWallet = () => {
   const { address, isConnected, chain, status } = useAccount();
   const { data: balance, isLoading: balanceLoading } = useBalance({
     address: address,
   });
+  
+  // KRW Token Balance
+  const { data: krwBalance, isLoading: krwBalanceLoading } = useReadContract({
+    ...KRW_CONTRACT_CONFIG,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && isConnected,
+    },
+  });
+
   const { disconnect } = useDisconnect();
   const { open } = useAppKit();
 
@@ -20,6 +33,15 @@ export const useWallet = () => {
     if (num === 0) return '0';
     if (num < 0.001) return '< 0.001';
     return num.toFixed(4);
+  };
+
+  const formatKrwBalance = (balance?: bigint) => {
+    if (!balance) return '0';
+    const formatted = formatUnits(balance, 18);
+    const num = parseFloat(formatted);
+    if (num === 0) return '0';
+    if (num < 1) return num.toFixed(4);
+    return num.toLocaleString('ko-KR', { maximumFractionDigits: 0 });
   };
 
   const copyAddress = async () => {
@@ -50,18 +72,25 @@ export const useWallet = () => {
     } : null,
     balanceLoading,
     
+    // KRW Token Balance
+    krwBalance: krwBalance ? {
+      raw: krwBalance,
+      formatted: formatKrwBalance(krwBalance),
+      symbol: 'KRW'
+    } : null,
+    krwBalanceLoading,
+    
     // Formatted helpers
     formattedAddress: formatAddress(address),
+    
+    // Network info
+    networkName: chain?.name || 'Unknown Network',
+    isKaiaTestnet: chain?.id === 1001,
     
     // Actions
     connect: () => open(),
     disconnect,
     copyAddress,
     openExplorer,
-    
-    // Network info
-    networkName: chain?.name || 'Unknown Network',
-    isKaiaTestnet: chain?.id === 1001,
-    explorerUrl: chain?.blockExplorers?.default?.url,
   };
 };

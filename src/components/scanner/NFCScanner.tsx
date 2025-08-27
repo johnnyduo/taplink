@@ -79,9 +79,9 @@ const NFCScanner: React.FC<NFCScannerProps> = ({ onScanComplete }) => {
             variant="primary" 
             size="lg" 
             onClick={handleScan}
-            className="w-full btn-aligned"
+            className="w-full"
           >
-            <span>Start Scan</span>
+            <span className="leading-none">Start Scan</span>
           </FuturisticButton>
         )}
 
