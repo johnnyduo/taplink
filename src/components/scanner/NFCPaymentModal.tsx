@@ -92,12 +92,14 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
     }
   }, [isConnected, productData, checkBalance]);
 
-  // Handle payment completion
+  // Handle payment completion with explorer URL
   useEffect(() => {
     if (isSuccess && receipt && currentStep === 'success') {
+      const explorerUrl = `${import.meta.env.VITE_KAIA_KAIROS_EXPLORER}/tx/${transactionHash}`;
       const receiptData = {
         transactionId: transactionHash,
         transactionHash,
+        explorerUrl, // Add explorer URL
         productId: productData.productId,
         productName: productData.name,
         amount: productData.price,
@@ -319,11 +321,17 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
         <div className="text-sm text-text-tertiary space-y-1">
           <div>Product: {productData.name}</div>
           <div>Amount: {NFCTagManager.formatPrice(productData.price, productData.currency)}</div>
+          <div>Payment: {productData.price.toLocaleString()} KRW tokens</div>
           {transactionHash && (
-            <div className="flex items-center justify-center space-x-2">
-              <span>TX: {transactionHash.slice(0, 8)}...{transactionHash.slice(-6)}</span>
+            <a 
+              href={`${import.meta.env.VITE_KAIA_KAIROS_EXPLORER}/tx/${transactionHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center space-x-2 text-accent-cyan hover:text-accent-cyan-bright transition-colors"
+            >
+              <span>View TX: {transactionHash.slice(0, 8)}...{transactionHash.slice(-6)}</span>
               <ExternalLink className="w-3 h-3" />
-            </div>
+            </a>
           )}
         </div>
       </div>

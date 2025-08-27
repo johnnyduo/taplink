@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { hardcodedWallet } from '@/lib/hardcodedWallet';
 import { toast } from 'sonner';
 
@@ -50,10 +50,6 @@ export const useHardcodedWallet = (): UseHardcodedWalletResult => {
         isLoading: false,
         isConnected: true,
       }));
-
-      toast.success('🔐 Demo wallet connected!', {
-        description: `Address: ${hardcodedWallet.getWalletInfo().shortAddress}`
-      });
       
       console.log('📱 Wallet connected:', {
         address: hardcodedWallet.address,
@@ -139,17 +135,8 @@ export const useHardcodedWallet = (): UseHardcodedWalletResult => {
 
     setState(prev => ({ ...prev, isLoading: true }));
     
-    const toastId = toast.loading('💳 Processing payment...', {
-      description: `Paying ${amount} KAIA for ${productId}`
-    });
-    
     try {
       const hash = await hardcodedWallet.processPayment(productId, amount, merchantAddress);
-      
-      toast.success('✅ Payment successful!', {
-        id: toastId,
-        description: `Transaction: ${hash.slice(0, 10)}...${hash.slice(-6)}`
-      });
       
       // Refresh balances after payment
       setTimeout(() => {
@@ -159,10 +146,6 @@ export const useHardcodedWallet = (): UseHardcodedWalletResult => {
       return hash;
     } catch (error: any) {
       console.error('Failed to process payment:', error);
-      toast.error('💸 Payment failed', {
-        id: toastId,
-        description: error.message
-      });
       throw error;
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));

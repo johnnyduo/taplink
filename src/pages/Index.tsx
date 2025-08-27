@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import { ConnectWallet } from '@/components/wallet/ConnectWallet';
-import { PaymentContractTest } from '@/components/debug/PaymentContractTest';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Badge } from '@/components/ui/badge';
@@ -274,9 +273,6 @@ const Index = () => {
           
           {/* Tap to Buy */}
           {renderTapToBuy()}
-          
-          {/* Payment Contract Test */}
-          <PaymentContractTest />
           
           {/* Owner Dashboard Access */}
           <div className="text-center pt-4">

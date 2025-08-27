@@ -123,8 +123,8 @@ export const useNFCPayment = (): UseNFCPaymentResult => {
 
     return {
       hasEnoughBalance: hasEnoughKRW && hasEnoughKAIA,
-      currentBalance: `${currentKRWBalance} KRW, ${currentKaiaBalance} KAIA`,
-      requiredAmount: `${requiredKRW} KRW + ${gasEstimateKAIA} KAIA gas`,
+      currentBalance: `${currentKRWBalance.toLocaleString()} KRW, ${currentKaiaBalance.toFixed(4)} KAIA`,
+      requiredAmount: `${requiredKRW.toLocaleString()} KRW + ${gasEstimateKAIA.toFixed(4)} KAIA gas`,
     };
   }, [krwBalance, kaiaBalance]);
 
