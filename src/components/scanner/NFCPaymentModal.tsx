@@ -250,8 +250,8 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
             <span className="font-medium text-text-primary">Balance Check</span>
           </div>
           <div className="text-sm space-y-1">
-            <div>Current: {parseFloat(balanceInfo.currentBalance).toFixed(4)} KAIA</div>
-            <div>Required: {parseFloat(balanceInfo.requiredAmount).toFixed(4)} KAIA</div>
+            <div>Current: {balanceInfo.currentBalance}</div>
+            <div>Required: {balanceInfo.requiredAmount}</div>
             {!balanceInfo.hasEnoughBalance && (
               <div className="text-status-warning font-medium">Insufficient balance</div>
             )}

@@ -1,5 +1,5 @@
 // Test NFC data parsing
-const testNFCData = `{"type":"product","version":"1.0","data":{"productId":"coffee-americano-001","name":"Premium Americano","price":25000,"currency":"KRW","description":"Rich and bold American-style coffee","image":"/products/americano.jpg","merchantId":"cafe-seoul-001","merchantName":"Cafe Seoul","contractAddress":"0x9d5F1273002Cc4DAC76B72249ed59B21Ba41D526","chainId":1001,"timestamp":1724774400000}}`;
+const testNFCData = `{"type":"product","version":"1.0","data":{"productId":"1001","name":"Cap NY","price":25000,"currency":"KRW","description":"Stylish New York cap for everyday wear","image":"/products/cap-ny.jpg","merchantId":"fashion-store-001","merchantName":"Fashion Store Seoul","contractAddress":"0x9d5F1273002Cc4DAC76B72249ed59B21Ba41D526","chainId":1001,"timestamp":1724774400000}}`;
 
 console.log('🧪 Testing NFC data parsing...\n');
 

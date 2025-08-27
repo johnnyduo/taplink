@@ -126,48 +126,18 @@ export class HardcodedWallet {
       // Convert KRW amount to token units for approval
       const krwTokenAmount = parseEther(krwAmount);
       
-      // Force product to be active - always add or reactivate if needed
-      let productNeedsUpdate = false;
-      
+      // ALWAYS ensure product is active by adding it every time
+      // This guarantees the product exists and is active
+      console.log('🔄 Force adding/updating product to guarantee it\'s active...');
       try {
-        console.log('🔍 Checking if product exists and is active in contract...');
-        const productInfo = await this.publicClient.readContract({
-          ...PAYMENT_CONTRACT_CONFIG,
-          functionName: 'getProduct',
-          args: [productId]
-        }) as [string, bigint, bigint, boolean]; // [name, price, stock, active]
-        
-        const [name, price, stock, active] = productInfo;
-        
-        if (name === '') {
-          // Product doesn't exist
-          console.log('➕ Product not found, will add it to contract...');
-          productNeedsUpdate = true;
-        } else if (!active) {
-          // Product exists but is inactive - we'll add it again to force activation
-          console.log('🔄 Product exists but is inactive, will reactivate it...');
-          productNeedsUpdate = true;
-        } else {
-          console.log('✅ Product exists and is active in contract:', {
-            name,
-            price: price.toString(),
-            stock: stock.toString(),
-            active
-          });
-        }
-      } catch (productError) {
-        console.log('➕ Product check failed, will add it to contract...', productError);
-        productNeedsUpdate = true;
-      }
-      
-      // Add or update the product to ensure it's active
-      if (productNeedsUpdate) {
-        console.log('📝 Adding/updating product to ensure it\'s active...');
         const addProductHash = await this.walletClient.writeContract({
           ...PAYMENT_CONTRACT_CONFIG,
           functionName: 'addProduct',
           args: [
             productId,
+            productId.includes('1001') ? 'Cap NY' : 
+            productId.includes('hat') ? 'Cap Hat' :
+            productId.includes('cap') ? 'Cap NY' :
             productId.includes('americano') ? 'Premium Americano' : 
             productId.includes('latte') ? 'Creamy Latte' :
             productId.includes('cappuccino') ? 'Classic Cappuccino' :
@@ -176,26 +146,31 @@ export class HardcodedWallet {
             BigInt(100) // stock
           ]
         });
-        console.log('⏳ Waiting for product registration/update...');
+        console.log('⏳ Waiting for product registration...');
         await this.publicClient.waitForTransactionReceipt({ hash: addProductHash });
-        console.log('✅ Product is now active in contract');
+        console.log('✅ Product is now guaranteed active');
+      } catch (addError: any) {
+        console.log('ℹ️ Product add failed (probably already exists):', addError.message);
+        // This is OK - product probably already exists, let's continue
+      }
+      
+      // Verify the product is now active
+      try {
+        const verifyProduct = await this.publicClient.readContract({
+          ...PAYMENT_CONTRACT_CONFIG,
+          functionName: 'getProduct',
+          args: [productId]
+        }) as [string, bigint, bigint, boolean];
+        console.log('🔍 Final product state:', verifyProduct);
         
-        // Verify the product is now active
-        try {
-          const verifyProduct = await this.publicClient.readContract({
-            ...PAYMENT_CONTRACT_CONFIG,
-            functionName: 'getProduct',
-            args: [productId]
-          }) as [string, bigint, bigint, boolean];
-          console.log('✅ Product verification successful - FORCED ACTIVE:', verifyProduct);
-          
-          if (!verifyProduct[3]) { // still not active
-            throw new Error('Failed to force product to active state');
-          }
-        } catch (verifyError) {
-          console.error('❌ Product verification failed:', verifyError);
-          throw new Error('Failed to verify product was activated in contract');
+        const [name, price, stock, active] = verifyProduct;
+        if (!active || name === '') {
+          throw new Error(`Product "${productId}" is not active after add attempt`);
         }
+        console.log('✅ Product verified as ACTIVE and ready for payment');
+      } catch (verifyError) {
+        console.error('❌ Product verification failed:', verifyError);
+        throw new Error('Product is not active and cannot be used for payment');
       }
       
       // Step 1: Approve KRW tokens for the payment contract

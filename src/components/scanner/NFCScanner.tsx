@@ -284,7 +284,7 @@ const NFCScanner: React.FC<NFCScannerProps> = ({
             className="w-full text-lg font-bold py-4"
             onClick={() => {
               // For demo purposes, simulate scanning
-              const mockData = NFCTagManager.getProduct('coffee-americano-001');
+              const mockData = NFCTagManager.getProduct('1001');
               if (mockData) {
                 setTimeout(() => onScanComplete(mockData), 1000);
               }
