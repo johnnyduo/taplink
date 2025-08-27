@@ -78,8 +78,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           {/* Payment Method */}
           <div className="p-4 rounded-xl bg-surface-700/30 border border-glass-1">
             <div className="flex items-center space-x-3">
-              <div className="p-2 rounded-lg bg-gradient-cta">
-                <CreditCard className="w-5 h-5 text-surface-900" />
+              <div className="p-2 rounded-lg bg-gradient-button">
+                <CreditCard className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
                 <p className="font-medium text-text-primary">NFC Payment</p>

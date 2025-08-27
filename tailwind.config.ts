@@ -20,40 +20,55 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				'display': ['Orbitron', 'monospace'],
-				'sans': ['Inter', 'system-ui', 'sans-serif'],
+				'display': ['Poppins', 'sans-serif'],
+				'sans': ['Poppins', 'system-ui', 'sans-serif'],
 			},
 			colors: {
-				// Surface Colors
+				// Surface Colors - Modern Gradient Theme
 				'surface': {
-					900: '#05060a',
-					800: '#0b1620',
-					700: '#0f2430',
-					600: '#1a3444',
+					900: '#0a0e1a',
+					800: '#111827',
+					700: '#1f2937',
+					600: '#374151',
+					500: '#4b5563',
 				},
-				// Accent Colors
+				// Primary Gradient Colors
+				'gradient': {
+					teal: '#14b8a6',
+					cyan: '#22d3ee',
+					blue: '#3b82f6',
+					indigo: '#6366f1',
+				},
+				// Accent Colors - Soft & Modern
 				'accent': {
-					cyan: '#00E6D6',
-					rose: '#FF5DA8',
-					violet: '#7B5CFF',
+					emerald: '#10b981',
+					sky: '#0ea5e9',
+					violet: '#8b5cf6',
+					pink: '#ec4899',
+					// Legacy support
+					cyan: '#22d3ee',
+					rose: '#ec4899',
 				},
 				// Glass Colors
 				'glass': {
-					1: 'rgba(255, 255, 255, 0.04)',
-					2: 'rgba(255, 255, 255, 0.06)',
-					3: 'rgba(255, 255, 255, 0.08)',
+					1: 'rgba(20, 184, 166, 0.05)',
+					2: 'rgba(34, 211, 238, 0.08)',
+					3: 'rgba(59, 130, 246, 0.12)',
+					white: 'rgba(255, 255, 255, 0.06)',
 				},
-				// Text Colors
+				// Text Colors - Improved Contrast
 				'text': {
-					primary: '#E6EEF6',
-					secondary: '#A9BAC6',
-					tertiary: '#6B7887',
+					primary: '#f8fafc',
+					secondary: '#cbd5e1',
+					tertiary: '#94a3b8',
+					muted: '#64748b',
 				},
-				// Status Colors
+				// Status Colors - Softer Tones
 				'status': {
-					success: '#23D1A2',
-					danger: '#FF6B6B',
-					warning: '#FFB800',
+					success: '#22c55e',
+					danger: '#ef4444',
+					warning: '#f59e0b',
+					info: '#22d3ee',
 				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -76,10 +91,6 @@ export default {
 					DEFAULT: 'hsl(var(--muted))',
 					foreground: 'hsl(var(--muted-foreground))'
 				},
-				accent: {
-					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
-				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
 					foreground: 'hsl(var(--popover-foreground))'
@@ -90,9 +101,13 @@ export default {
 				},
 			},
 			backgroundImage: {
-				'gradient-panel': 'linear-gradient(135deg, #082033 0%, #0f2430 100%)',
-				'gradient-cta': 'linear-gradient(90deg, #00E6D6 0%, rgba(123, 92, 255, 0.6) 100%)',
-				'gradient-glow': 'linear-gradient(90deg, rgba(0, 230, 214, 0.1) 0%, rgba(123, 92, 255, 0.1) 100%)',
+				'gradient-main': 'linear-gradient(135deg, #14b8a6 0%, #22d3ee 25%, #3b82f6 75%, #6366f1 100%)',
+				'gradient-panel': 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
+				'gradient-card': 'linear-gradient(135deg, rgba(20, 184, 166, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
+				'gradient-button': 'linear-gradient(135deg, #14b8a6 0%, #22d3ee 50%, #3b82f6 100%)',
+				'gradient-glow': 'linear-gradient(135deg, rgba(20, 184, 166, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)',
+				// Legacy support
+				'gradient-cta': 'linear-gradient(135deg, #14b8a6 0%, #22d3ee 50%, #3b82f6 100%)',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

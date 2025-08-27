@@ -1,9 +1,12 @@
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import NFCScanner from '@/components/scanner/NFCScanner'; 
 import PaymentModal from '@/components/payment/PaymentModal';
 import ReceiptNFT from '@/components/receipt/ReceiptNFT';
+import { FuturisticButton } from '@/components/ui/futuristic-button';
+import { Settings } from 'lucide-react';
 
 const Index = () => {
   const [currentStep, setCurrentStep] = useState<'scan' | 'payment' | 'receipt'>('scan');
@@ -42,7 +45,19 @@ const Index = () => {
         
         <main className="animate-fade-in">
           {currentStep === 'scan' && (
-            <NFCScanner onScanComplete={handleScanComplete} />
+            <div className="space-y-4">
+              <NFCScanner onScanComplete={handleScanComplete} />
+              
+              {/* Owner Dashboard Access */}
+              <div className="text-center">
+                <Link to="/owner">
+                  <FuturisticButton variant="ghost" size="sm">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Shop Owner Dashboard
+                  </FuturisticButton>
+                </Link>
+              </div>
+            </div>
           )}
         </main>
 

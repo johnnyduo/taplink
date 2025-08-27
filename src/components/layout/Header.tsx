@@ -15,8 +15,8 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, userRole = 'customer' 
     <GlassCard className="p-4 mb-6 backdrop-blur-xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-lg bg-gradient-cta">
-            <Zap className="w-6 h-6 text-surface-900" />
+          <div className="p-2 rounded-lg bg-gradient-button">
+            <Zap className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-display text-xl font-bold text-text-primary">

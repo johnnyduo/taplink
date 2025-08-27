@@ -4,15 +4,15 @@ import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 tap-feedback disabled:opacity-50 disabled:pointer-events-none relative overflow-hidden',
+  'inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 tap-feedback disabled:opacity-50 disabled:pointer-events-none relative overflow-hidden group',
   {
     variants: {
       variant: {
-        primary: 'bg-gradient-cta text-surface-900 font-semibold hover:shadow-[0_0_30px_rgba(0,230,214,0.4)] hover:-translate-y-1',
-        secondary: 'glass-surface text-text-primary hover:bg-glass-2 border border-glass-2',
+        primary: 'bg-gradient-button text-white font-semibold hover:shadow-[0_0_30px_rgba(20,184,166,0.4)] hover:-translate-y-1 shadow-button',
+        secondary: 'glass-surface text-text-primary hover:bg-glass-2 border border-glass-2 hover:border-glass-3',
         ghost: 'text-text-secondary hover:text-text-primary hover:bg-glass-1',
-        danger: 'bg-status-danger text-white hover:bg-red-600',
-        success: 'bg-status-success text-surface-900 hover:bg-green-400',
+        danger: 'bg-status-danger text-white hover:bg-red-500',
+        success: 'bg-status-success text-white hover:bg-green-500',
       },
       size: {
         sm: 'h-10 px-4 text-sm',
@@ -41,9 +41,9 @@ const FuturisticButton = React.forwardRef<HTMLButtonElement, FuturisticButtonPro
         {...props}
       >
         {variant === 'primary' && (
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
         )}
-        <span className="relative z-10 uppercase tracking-wide">{children}</span>
+        <span className="relative z-10 font-medium tracking-wide">{children}</span>
       </button>
     );
   }
