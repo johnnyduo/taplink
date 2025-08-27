@@ -105,29 +105,65 @@ export class HardcodedWallet {
     }
   }
 
-  // Process payment transaction
+  // Process payment transaction using KRW stable coins
   async processPayment(
     productId: string,
-    amount: string,
+    krwAmount: string, // This is the KRW token amount, not KAIA
     merchantAddress: `0x${string}`
   ): Promise<`0x${string}`> {
     try {
-      const contractAddress = import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`;
+      const paymentContract = import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`;
+      const krwContract = import.meta.env.VITE_KRW_CONTRACT_ADDRESS as `0x${string}`;
       
-      if (!contractAddress) {
-        throw new Error('Payment contract address not configured');
+      if (!paymentContract || !krwContract) {
+        throw new Error('Contract addresses not configured');
       }
 
-      const amountWei = parseEther(amount);
+      // Convert KRW amount to token units (KRW tokens have 18 decimals)
+      const krwTokenAmount = parseEther(krwAmount);
+      
+      console.log('💳 Payment process started:', {
+        productId,
+        krwAmount: krwAmount + ' KRW tokens',
+        krwTokenAmount: krwTokenAmount.toString() + ' wei',
+        merchantAddress,
+        paymentContract,
+        krwContract
+      });
 
-      // Call the payment contract
-      const hash = await this.walletClient.writeContract({
-        address: contractAddress,
+      // Step 1: Approve KRW tokens for the payment contract
+      console.log('🔓 Approving KRW tokens...');
+      const approveHash = await this.walletClient.writeContract({
+        address: krwContract,
+        abi: [
+          {
+            name: 'approve',
+            type: 'function',
+            stateMutability: 'nonpayable',
+            inputs: [
+              { name: 'spender', type: 'address' },
+              { name: 'amount', type: 'uint256' }
+            ],
+            outputs: [{ name: '', type: 'bool' }]
+          }
+        ],
+        functionName: 'approve',
+        args: [paymentContract, krwTokenAmount]
+      });
+
+      // Wait for approval to be mined
+      console.log('⏳ Waiting for approval confirmation...');
+      await this.publicClient.waitForTransactionReceipt({ hash: approveHash });
+      
+      // Step 2: Call the payment contract (only pays gas in KAIA, transfers KRW tokens)
+      console.log('💸 Processing payment with KRW tokens...');
+      const paymentHash = await this.walletClient.writeContract({
+        address: paymentContract,
         abi: [
           {
             name: 'processPayment',
             type: 'function',
-            stateMutability: 'payable',
+            stateMutability: 'nonpayable', // No longer payable since we use KRW tokens
             inputs: [
               { name: '_recipient', type: 'address' },
               { name: '_amount', type: 'uint256' },
@@ -138,14 +174,20 @@ export class HardcodedWallet {
           }
         ],
         functionName: 'processPayment',
-        args: [merchantAddress, amountWei, productId, 'demo-merchant'],
-        value: amountWei
+        args: [merchantAddress, krwTokenAmount, productId, 'demo-merchant']
+        // No value field - we're not sending KAIA, only using it for gas
       });
 
-      console.log('💳 Payment processed:', { hash, productId, amount });
-      return hash;
+      console.log('✅ Payment completed:', { 
+        approveHash, 
+        paymentHash, 
+        productId, 
+        krwAmount: krwAmount + ' KRW tokens'
+      });
+      
+      return paymentHash;
     } catch (error) {
-      console.error('Failed to process payment:', error);
+      console.error('❌ Failed to process KRW token payment:', error);
       throw error;
     }
   }

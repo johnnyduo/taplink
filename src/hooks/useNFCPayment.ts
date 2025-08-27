@@ -39,16 +39,18 @@ export const useNFCPayment = (): UseNFCPaymentResult => {
 
       setState(prev => ({ ...prev, isLoading: true, error: null, isSuccess: false }));
 
-      // Convert KRW price to KAIA (1 KRW = 0.001 KAIA for demo)
-      const priceInKaia = (parseFloat(productData.price.toString()) * 0.001).toString();
+      // Use KRW tokens directly - no conversion needed!
+      // The price from NFC (25000) represents 25,000 KRW tokens
+      const priceInKRW = productData.price.toString();
       
       console.log('🛒 Processing NFC payment:', {
         product: productData.name,
         priceKRW: productData.price,
-        priceKAIA: priceInKaia,
+        priceKRWTokens: priceInKRW + ' KRW tokens',
         productId: productData.productId,
         merchantId: productData.merchantId,
         walletAddress: address,
+        paymentMethod: 'KRW stable coin tokens + KAIA gas fees'
       });
 
       // Use the demo wallet address as merchant for testing (or get from productData if available)
@@ -57,13 +59,14 @@ export const useNFCPayment = (): UseNFCPaymentResult => {
       console.log('💰 Payment details:', {
         merchantAddress,
         paymentContract: productData.contractAddress,
-        amount: priceInKaia
+        krwTokenAmount: priceInKRW,
+        gasToken: 'KAIA'
       });
 
-      // Process the payment
+      // Process the payment using KRW tokens
       const hash = await walletProcessPayment(
         productData.productId,
-        priceInKaia,
+        priceInKRW,
         merchantAddress
       );
 
