@@ -93,24 +93,52 @@ export const useWebNFC = (): UseWebNFCResult => {
     try {
       const decoder = new TextDecoder();
       const jsonString = decoder.decode(data);
+      
+      console.log('📱 Raw NFC data string:', jsonString);
+      
       const tagData: NFCTagData = JSON.parse(jsonString);
+      
+      console.log('📱 Parsed NFC tag data:', tagData);
       
       // Validate the tag data structure
       if (tagData.type === 'product' && tagData.data) {
         const productData = tagData.data as NFCProductData;
         
-        // Validate required fields
-        if (productData.productId && productData.name && productData.price !== undefined) {
+        console.log('📱 Product data extracted:', productData);
+        
+        // Validate required fields (including merchantId and contractAddress)
+        if (productData.productId && 
+            productData.name && 
+            productData.price !== undefined && 
+            productData.price > 0 &&
+            productData.merchantId &&
+            productData.contractAddress) {
+          
+          console.log('✅ NFC product data validation passed');
+          
           return {
             ...productData,
             timestamp: Date.now(), // Add current timestamp
           };
+        } else {
+          console.error('❌ Missing required fields:', {
+            productId: !!productData.productId,
+            name: !!productData.name,
+            price: productData.price !== undefined && productData.price > 0,
+            merchantId: !!productData.merchantId,
+            contractAddress: !!productData.contractAddress
+          });
         }
+      } else {
+        console.error('❌ Invalid tag structure:', {
+          type: tagData.type,
+          hasData: !!tagData.data
+        });
       }
       
       throw new Error('Invalid NFC tag format');
     } catch (error: any) {
-      console.error('Failed to parse NFC data:', error);
+      console.error('❌ Failed to parse NFC data:', error);
       throw new Error('Invalid NFC tag data format');
     }
   }, []);
@@ -147,15 +175,23 @@ export const useWebNFC = (): UseWebNFCResult => {
 
       // Set up event listeners
       reader.onreading = (event: NDEFReadingEvent) => {
-        console.log('NFC tag detected:', event);
+        console.log('📱 NFC tag detected:', event);
+        console.log('📱 Message records:', event.message.records);
         
         try {
           // Process each record in the message
           for (const record of event.message.records) {
+            console.log('📱 Processing record:', {
+              recordType: record.recordType,
+              hasData: !!record.data,
+              dataLength: record.data?.byteLength
+            });
+            
             if (record.recordType === 'text' || record.recordType === 'application/json') {
               if (record.data) {
                 const productData = parseNFCData(record.data as ArrayBuffer);
                 if (productData) {
+                  console.log('✅ Successfully parsed product data:', productData);
                   setState(prev => ({
                     ...prev,
                     lastScannedData: productData,
@@ -164,13 +200,19 @@ export const useWebNFC = (): UseWebNFCResult => {
                   }));
                   return; // Exit after successful parse
                 }
+              } else {
+                console.warn('⚠️ Record has no data:', record);
               }
+            } else {
+              console.warn('⚠️ Unsupported record type:', record.recordType);
             }
           }
           
           // If no valid data found in any record
+          console.error('❌ No valid product data found in any record');
           throw new Error('No valid product data found in NFC tag');
         } catch (error: any) {
+          console.error('❌ Error processing NFC tag:', error);
           setState(prev => ({
             ...prev,
             error: error.message || 'Failed to read NFC tag data'
