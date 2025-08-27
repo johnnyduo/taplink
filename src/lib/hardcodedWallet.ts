@@ -1,5 +1,8 @@
-import { createWalletClient, createPublicClient, http, formatEther, parseEther } from 'viem';
+import { createWalletClient, createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
+import { formatEther, parseEther } from 'viem/utils';
+import { PAYMENT_CONTRACT_CONFIG } from './contracts/payment-abi';
+import { KRW_CONTRACT_CONFIG } from './contracts/krw-abi';
 import { defineChain } from 'viem';
 
 // Define Kaia Testnet chain
@@ -108,86 +111,91 @@ export class HardcodedWallet {
   // Process payment transaction using KRW stable coins
   async processPayment(
     productId: string,
-    krwAmount: string, // This is the KRW token amount, not KAIA
-    merchantAddress: `0x${string}`
+    krwAmount: string, // KRW amount for reference and approval
+    merchantAddress: `0x${string}` // Not used in tapToPay but kept for compatibility
   ): Promise<`0x${string}`> {
     try {
-      const paymentContract = import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`;
-      const krwContract = import.meta.env.VITE_KRW_CONTRACT_ADDRESS as `0x${string}`;
-      
-      if (!paymentContract || !krwContract) {
-        throw new Error('Contract addresses not configured');
-      }
-
-      // Convert KRW amount to token units (KRW tokens have 18 decimals)
-      const krwTokenAmount = parseEther(krwAmount);
-      
-      console.log('💳 Payment process started:', {
+      console.log('💳 Starting KRW token payment:', {
         productId,
         krwAmount: krwAmount + ' KRW tokens',
-        krwTokenAmount: krwTokenAmount.toString() + ' wei',
-        merchantAddress,
-        paymentContract,
-        krwContract
+        paymentContract: PAYMENT_CONTRACT_CONFIG.address,
+        krwContract: KRW_CONTRACT_CONFIG.address,
+        method: 'tapToPay'
       });
 
+      // Convert KRW amount to token units for approval
+      const krwTokenAmount = parseEther(krwAmount);
+      
+      // Check if product exists, if not add it (for demo purposes)
+      try {
+        console.log('🔍 Checking if product exists in contract...');
+        await this.publicClient.readContract({
+          ...PAYMENT_CONTRACT_CONFIG,
+          functionName: 'getProduct',
+          args: [productId]
+        });
+        console.log('✅ Product exists in contract');
+      } catch (productError) {
+        console.log('➕ Product not found, adding it to contract...');
+        // Add the product to the contract
+        const addProductHash = await this.walletClient.writeContract({
+          ...PAYMENT_CONTRACT_CONFIG,
+          functionName: 'addProduct',
+          args: [
+            productId,
+            productId.includes('americano') ? 'Premium Americano' : 
+            productId.includes('latte') ? 'Creamy Latte' :
+            productId.includes('cappuccino') ? 'Classic Cappuccino' :
+            productId.includes('croissant') ? 'Butter Croissant' : 'Unknown Product',
+            krwTokenAmount, // price
+            BigInt(100) // stock
+          ]
+        });
+        console.log('⏳ Waiting for product registration...');
+        await this.publicClient.waitForTransactionReceipt({ hash: addProductHash });
+        console.log('✅ Product added to contract');
+      }
+      
       // Step 1: Approve KRW tokens for the payment contract
-      console.log('🔓 Approving KRW tokens...');
+      console.log('🔓 Approving KRW tokens for payment contract...');
       const approveHash = await this.walletClient.writeContract({
-        address: krwContract,
-        abi: [
-          {
-            name: 'approve',
-            type: 'function',
-            stateMutability: 'nonpayable',
-            inputs: [
-              { name: 'spender', type: 'address' },
-              { name: 'amount', type: 'uint256' }
-            ],
-            outputs: [{ name: '', type: 'bool' }]
-          }
-        ],
+        ...KRW_CONTRACT_CONFIG,
         functionName: 'approve',
-        args: [paymentContract, krwTokenAmount]
+        args: [PAYMENT_CONTRACT_CONFIG.address, krwTokenAmount]
       });
 
       // Wait for approval to be mined
       console.log('⏳ Waiting for approval confirmation...');
       await this.publicClient.waitForTransactionReceipt({ hash: approveHash });
       
-      // Step 2: Call the payment contract (only pays gas in KAIA, transfers KRW tokens)
-      console.log('💸 Processing payment with KRW tokens...');
+      // Step 2: Use tapToPay function - contract handles everything internally
+      console.log('💸 Calling tapToPay function...');
       const paymentHash = await this.walletClient.writeContract({
-        address: paymentContract,
-        abi: [
-          {
-            name: 'processPayment',
-            type: 'function',
-            stateMutability: 'nonpayable', // No longer payable since we use KRW tokens
-            inputs: [
-              { name: '_recipient', type: 'address' },
-              { name: '_amount', type: 'uint256' },
-              { name: '_productId', type: 'string' },
-              { name: '_merchantId', type: 'string' }
-            ],
-            outputs: []
-          }
-        ],
-        functionName: 'processPayment',
-        args: [merchantAddress, krwTokenAmount, productId, 'demo-merchant']
-        // No value field - we're not sending KAIA, only using it for gas
+        ...PAYMENT_CONTRACT_CONFIG,
+        functionName: 'tapToPay',
+        args: [productId, `nfc-${Date.now()}`] // Generate unique NFC ID
       });
 
-      console.log('✅ Payment completed:', { 
+      console.log('✅ Payment completed successfully:', { 
         approveHash, 
         paymentHash, 
-        productId, 
-        krwAmount: krwAmount + ' KRW tokens'
+        productId,
+        note: 'KRW tokens transferred, KAIA used for gas only'
       });
       
       return paymentHash;
-    } catch (error) {
-      console.error('❌ Failed to process KRW token payment:', error);
+    } catch (error: any) {
+      console.error('❌ KRW token payment failed:', error);
+      
+      // Better error handling
+      if (error.message.includes('Product not found') || error.message.includes('not exist')) {
+        throw new Error(`Product "${productId}" not found in payment contract. Please add it first.`);
+      } else if (error.message.includes('insufficient allowance') || error.message.includes('transfer amount exceeds allowance')) {
+        throw new Error('Insufficient KRW token allowance. Please try again.');
+      } else if (error.message.includes('insufficient balance') || error.message.includes('transfer amount exceeds balance')) {
+        throw new Error('Insufficient KRW token balance. Please claim more tokens from the faucet.');
+      }
+      
       throw error;
     }
   }
