@@ -256,19 +256,19 @@ export const ConnectWallet: React.FC = () => {
             </div>
           </div>
 
-          {/* Main Action Buttons - Compact */}
+          {/* Main Action Buttons - Improved Mobile Layout */}
           <div className="flex space-x-2">
-            <div className="flex-1">
+            <div className="flex-[2]">
               <KRWFaucet />
             </div>
             <FuturisticButton 
               variant="ghost" 
               size="sm"
               onClick={() => disconnect()}
-              className="flex-1 h-9 text-status-danger hover:bg-status-danger/10 border-status-danger/30 hover:border-status-danger/50"
+              className="flex-[1] h-9 text-status-danger hover:bg-status-danger/10 border-status-danger/30 hover:border-status-danger/50 px-2"
             >
-              <LogOut className="w-4 h-4 mr-1.5 flex-shrink-0" />
-              <span className="text-sm">Disconnect</span>
+              <LogOut className="w-4 h-4 flex-shrink-0" />
+              <span className="text-xs hidden sm:inline ml-1">Disconnect</span>
             </FuturisticButton>
           </div>
 
