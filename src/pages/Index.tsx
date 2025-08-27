@@ -5,6 +5,7 @@ import Header from '@/components/layout/Header';
 import NFCScanner from '@/components/scanner/NFCScanner'; 
 import PaymentModal from '@/components/payment/PaymentModal';
 import ReceiptNFT from '@/components/receipt/ReceiptNFT';
+import { ConnectWallet } from '@/components/wallet/ConnectWallet';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { Settings } from 'lucide-react';
 
@@ -46,14 +47,17 @@ const Index = () => {
         <main className="animate-fade-in">
           {currentStep === 'scan' && (
             <div className="space-y-4">
+              {/* Wallet Connection Section */}
+              <ConnectWallet />
+              
               <NFCScanner onScanComplete={handleScanComplete} />
               
               {/* Owner Dashboard Access */}
               <div className="text-center">
                 <Link to="/owner">
-                  <FuturisticButton variant="ghost" size="sm">
+                  <FuturisticButton variant="ghost" size="sm" className="btn-aligned">
                     <Settings className="w-4 h-4 mr-2" />
-                    Shop Owner Dashboard
+                    <span>Shop Owner Dashboard</span>
                   </FuturisticButton>
                 </Link>
               </div>

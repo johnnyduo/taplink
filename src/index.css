@@ -217,6 +217,25 @@
     animation: float 6s ease-in-out infinite;
   }
 
+  /* Perfect Button Alignment */
+  .btn-aligned {
+    @apply inline-flex items-center justify-center;
+    line-height: 1;
+  }
+
+  .btn-aligned svg {
+    flex-shrink: 0;
+  }
+
+  .icon-text-aligned {
+    @apply inline-flex items-center;
+    line-height: 1;
+  }
+
+  .icon-text-aligned svg {
+    flex-shrink: 0;
+  }
+
   @keyframes fadeIn {
     from {
       opacity: 0;

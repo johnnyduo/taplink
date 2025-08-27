@@ -79,9 +79,9 @@ const NFCScanner: React.FC<NFCScannerProps> = ({ onScanComplete }) => {
             variant="primary" 
             size="lg" 
             onClick={handleScan}
-            className="w-full"
+            className="w-full btn-aligned"
           >
-            Start Scan
+            <span>Start Scan</span>
           </FuturisticButton>
         )}
 
@@ -97,7 +97,7 @@ const NFCScanner: React.FC<NFCScannerProps> = ({ onScanComplete }) => {
       
       <div className="mt-8 text-center animate-float">
         <p className="text-sm text-text-tertiary mb-2">Demo Mode Active</p>
-        <div className="flex items-center justify-center space-x-2 text-xs text-accent-cyan">
+        <div className="icon-text-aligned justify-center space-x-2 text-xs text-accent-cyan">
           <div className="w-2 h-2 bg-accent-cyan rounded-full animate-pulse"></div>
           <span>Proof in hand.</span>
         </div>

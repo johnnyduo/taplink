@@ -1,24 +1,127 @@
-# Logs
-logs
-*.log
+# Dependencies
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-node_modules
-dist
-dist-ssr
+# Build outputs
+dist/
+dist-ssr/
+build/
+out/
 *.local
 
-# Editor directories and files
-.vscode/*
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# Web3 & Blockchain specific
+# Wallet private keys (NEVER commit these!)
+*.pem
+*.key
+private-keys/
+wallets/
+keystore/
+mnemonic.txt
+seed.txt
+
+# Smart contract artifacts
+artifacts/
+cache/
+typechain/
+typechain-types/
+contracts/build/
+.openzeppelin/
+deployments/local/
+.secret
+
+# Hardhat
+.hardhat/
+hardhat-shorthand
+
+# Foundry
+lib/
+broadcast/
+.forge-cache/
+
+# Testing
+coverage/
+coverage.json
+.nyc_output/
+junit.xml
+test-results/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.eslintcache
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# IDE and Editor files
+.vscode/
 !.vscode/extensions.json
-.idea
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Temporary files
+.tmp/
+tmp/
+temp/
+*.temp
+*.tmp
+
+# OS generated files
+Icon?
+.com.apple.timemachine.donotpresent
+
+# Package manager lock files (choose one)
+# package-lock.json  # uncomment if using npm
+# yarn.lock         # uncomment if using yarn
+# pnpm-lock.yaml    # uncomment if using pnpm
+
+# Storybook
+storybook-static/
+
+# Sentry
+.sentryclirc
+
+# Web3 dApp specific
+public/contracts/
+src/contracts/abis/
+src/types/typechain/
