@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -18,7 +19,42 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				'display': ['Orbitron', 'monospace'],
+				'sans': ['Inter', 'system-ui', 'sans-serif'],
+			},
 			colors: {
+				// Surface Colors
+				'surface': {
+					900: '#05060a',
+					800: '#0b1620',
+					700: '#0f2430',
+					600: '#1a3444',
+				},
+				// Accent Colors
+				'accent': {
+					cyan: '#00E6D6',
+					rose: '#FF5DA8',
+					violet: '#7B5CFF',
+				},
+				// Glass Colors
+				'glass': {
+					1: 'rgba(255, 255, 255, 0.04)',
+					2: 'rgba(255, 255, 255, 0.06)',
+					3: 'rgba(255, 255, 255, 0.08)',
+				},
+				// Text Colors
+				'text': {
+					primary: '#E6EEF6',
+					secondary: '#A9BAC6',
+					tertiary: '#6B7887',
+				},
+				// Status Colors
+				'status': {
+					success: '#23D1A2',
+					danger: '#FF6B6B',
+					warning: '#FFB800',
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
@@ -52,16 +88,11 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				sidebar: {
-					DEFAULT: 'hsl(var(--sidebar-background))',
-					foreground: 'hsl(var(--sidebar-foreground))',
-					primary: 'hsl(var(--sidebar-primary))',
-					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-					accent: 'hsl(var(--sidebar-accent))',
-					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-					border: 'hsl(var(--sidebar-border))',
-					ring: 'hsl(var(--sidebar-ring))'
-				}
+			},
+			backgroundImage: {
+				'gradient-panel': 'linear-gradient(135deg, #082033 0%, #0f2430 100%)',
+				'gradient-cta': 'linear-gradient(90deg, #00E6D6 0%, rgba(123, 92, 255, 0.6) 100%)',
+				'gradient-glow': 'linear-gradient(90deg, rgba(0, 230, 214, 0.1) 0%, rgba(123, 92, 255, 0.1) 100%)',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,11 +115,54 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fade-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'slide-up': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(20px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'float': {
+					'0%, 100%': {
+						transform: 'translateY(0px)'
+					},
+					'50%': {
+						transform: 'translateY(-10px)'
+					}
+				},
+				'mint-flip': {
+					'0%': {
+						transform: 'perspective(1000px) rotateY(0deg)',
+					},
+					'50%': {
+						transform: 'perspective(1000px) rotateY(90deg)',
+					},
+					'100%': {
+						transform: 'perspective(1000px) rotateY(0deg)',
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.28s ease-out',
+				'slide-up': 'slide-up 0.28s ease-out',
+				'float': 'float 6s ease-in-out infinite',
+				'mint-flip': 'mint-flip 1.5s ease-in-out',
 			}
 		}
 	},
