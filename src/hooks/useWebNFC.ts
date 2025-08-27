@@ -91,10 +91,24 @@ export const useWebNFC = (): UseWebNFCResult => {
   // Parse NFC data from NDEF record
   const parseNFCData = useCallback((data: ArrayBuffer): NFCProductData | null => {
     try {
-      const decoder = new TextDecoder();
-      const jsonString = decoder.decode(data);
+      const decoder = new TextDecoder('utf-8');
+      let jsonString = decoder.decode(data);
       
-      console.log('📱 Raw NFC data string:', jsonString);
+      // Remove potential BOM (Byte Order Mark) if present
+      if (jsonString.charCodeAt(0) === 0xFEFF) {
+        jsonString = jsonString.slice(1);
+      }
+      
+      // Trim whitespace
+      jsonString = jsonString.trim();
+      
+      console.log('📱 Raw NFC data string (length: ' + jsonString.length + '):', jsonString);
+      
+      // Check if the string looks like JSON
+      if (!jsonString.startsWith('{')) {
+        console.error('❌ Data does not start with {:', jsonString.substring(0, 50) + '...');
+        throw new Error('Invalid JSON format - does not start with {');
+      }
       
       const tagData: NFCTagData = JSON.parse(jsonString);
       
@@ -139,7 +153,17 @@ export const useWebNFC = (): UseWebNFCResult => {
       throw new Error('Invalid NFC tag format');
     } catch (error: any) {
       console.error('❌ Failed to parse NFC data:', error);
-      throw new Error('Invalid NFC tag data format');
+      
+      // If it's a JSON parsing error, show more details
+      if (error instanceof SyntaxError) {
+        console.error('❌ JSON Syntax Error at position:', error.message);
+        // Try to show the problematic area
+        const decoder = new TextDecoder('utf-8');
+        const rawString = decoder.decode(data);
+        console.error('❌ Raw data causing error:', rawString.substring(0, 100) + '...');
+      }
+      
+      throw new Error('Invalid NFC tag data format: ' + error.message);
     }
   }, []);
 
@@ -183,28 +207,44 @@ export const useWebNFC = (): UseWebNFCResult => {
           for (const record of event.message.records) {
             console.log('📱 Processing record:', {
               recordType: record.recordType,
+              mediaType: record.mediaType,
               hasData: !!record.data,
               dataLength: record.data?.byteLength
             });
             
-            if (record.recordType === 'text' || record.recordType === 'application/json') {
+            // Accept multiple record types that might contain text data
+            const isTextRecord = record.recordType === 'text' || 
+                                record.recordType === 'application/json' ||
+                                record.recordType === 'mime' ||
+                                record.mediaType === 'text/plain' ||
+                                record.mediaType === 'application/json';
+            
+            if (isTextRecord) {
               if (record.data) {
-                const productData = parseNFCData(record.data as ArrayBuffer);
-                if (productData) {
-                  console.log('✅ Successfully parsed product data:', productData);
-                  setState(prev => ({
-                    ...prev,
-                    lastScannedData: productData,
-                    scanCount: prev.scanCount + 1,
-                    error: null
-                  }));
-                  return; // Exit after successful parse
+                try {
+                  const productData = parseNFCData(record.data as ArrayBuffer);
+                  if (productData) {
+                    console.log('✅ Successfully parsed product data:', productData);
+                    setState(prev => ({
+                      ...prev,
+                      lastScannedData: productData,
+                      scanCount: prev.scanCount + 1,
+                      error: null
+                    }));
+                    return; // Exit after successful parse
+                  }
+                } catch (parseError: any) {
+                  console.warn('⚠️ Failed to parse this record:', parseError.message);
+                  // Continue to next record instead of failing completely
                 }
               } else {
                 console.warn('⚠️ Record has no data:', record);
               }
             } else {
-              console.warn('⚠️ Unsupported record type:', record.recordType);
+              console.warn('⚠️ Unsupported record type:', {
+                recordType: record.recordType,
+                mediaType: record.mediaType
+              });
             }
           }
           
