@@ -90,34 +90,13 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
     }
   }, [isConnected, productData, checkBalance]);
 
-  // Handle payment completion with explorer URL
+  // Handle payment completion with explorer URL - NO AUTOMATIC COMPLETION
   useEffect(() => {
+    // Only log the completion, don't auto-complete
     if (isSuccess && transactionHash && currentStep === 'success') {
-      const explorerUrl = `${import.meta.env.VITE_KAIA_KAIROS_EXPLORER}/tx/${transactionHash}`;
-      const receiptData = {
-        transactionId: transactionHash,
-        transactionHash,
-        explorerUrl, // Add explorer URL
-        productId: productData.productId,
-        productName: productData.name,
-        amount: productData.price,
-        currency: productData.currency,
-        merchantName: productData.merchantName,
-        merchantId: productData.merchantId,
-        timestamp: new Date().toISOString(),
-        nftTokenId: `NFT_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-        blockHash: receipt?.blockHash || '',
-        blockNumber: receipt?.blockNumber || 0n,
-        gasUsed: receipt?.gasUsed?.toString() || '0',
-        receipt,
-      };
-      
-      // Complete immediately since transaction is already successful
-      setTimeout(() => {
-        onPaymentComplete(receiptData);
-      }, 2000); // Shorter delay since we're not waiting for confirmation
+      console.log('✅ Payment successful, waiting for user to complete manually');
     }
-  }, [isSuccess, transactionHash, productData, currentStep, onPaymentComplete, receipt]);
+  }, [isSuccess, transactionHash, currentStep]);
 
   // Handle errors
   useEffect(() => {
@@ -165,6 +144,36 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
     resetPayment();
     setCurrentStep(isConnected ? 'confirm' : 'connect');
   }, [resetPayment, isConnected]);
+
+  // Handle manual completion (when user clicks "Complete" button)
+  const handleComplete = useCallback(() => {
+    if (isSuccess && transactionHash) {
+      const explorerUrl = `${import.meta.env.VITE_KAIA_KAIROS_EXPLORER}/tx/${transactionHash}`;
+      
+      // Generate FIXED NFT ID based on transaction hash (not random)
+      const fixedNftId = `NFT_${transactionHash.slice(2, 12).toUpperCase()}`;
+      
+      const receiptData = {
+        transactionId: transactionHash,
+        transactionHash,
+        explorerUrl,
+        productId: productData.productId,
+        productName: productData.name,
+        amount: productData.price,
+        currency: productData.currency,
+        merchantName: productData.merchantName,
+        merchantId: productData.merchantId,
+        timestamp: new Date().toISOString(),
+        nftTokenId: fixedNftId, // FIXED NFT ID based on transaction hash
+        blockHash: receipt?.blockHash || '',
+        blockNumber: receipt?.blockNumber || 0n,
+        gasUsed: receipt?.gasUsed?.toString() || '0',
+        receipt,
+      };
+      
+      onPaymentComplete(receiptData);
+    }
+  }, [isSuccess, transactionHash, productData, onPaymentComplete, receipt]);
 
   // Handle close
   const handleClose = useCallback(() => {
@@ -345,6 +354,25 @@ const NFCPaymentModal: React.FC<NFCPaymentModalProps> = ({
 
       <div className="text-xs text-accent-cyan opacity-75">
         ✨ Transaction confirmed on blockchain
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex space-x-3">
+        <FuturisticButton 
+          variant="secondary" 
+          onClick={handleClose}
+          className="flex-1"
+        >
+          Close
+        </FuturisticButton>
+        <FuturisticButton 
+          variant="primary" 
+          onClick={handleComplete}
+          className="flex-1"
+        >
+          <CheckCircle className="w-4 h-4 mr-2" />
+          Complete & Get Receipt
+        </FuturisticButton>
       </div>
     </div>
   );
