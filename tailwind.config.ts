@@ -169,6 +169,14 @@ export default {
 					'100%': {
 						transform: 'perspective(1000px) rotateY(0deg)',
 					}
+				},
+				'sweep': {
+					'0%': {
+						transform: 'translateX(-100%)',
+					},
+					'100%': {
+						transform: 'translateX(100%)',
+					}
 				}
 			},
 			animation: {
@@ -178,6 +186,7 @@ export default {
 				'slide-up': 'slide-up 0.28s ease-out',
 				'float': 'float 6s ease-in-out infinite',
 				'mint-flip': 'mint-flip 1.5s ease-in-out',
+				'sweep': 'sweep 2s ease-in-out infinite',
 			}
 		}
 	},

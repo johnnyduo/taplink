@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import OwnerDashboard from "./pages/OwnerDashboard";
 import { PaymentPage } from "./pages/Payment";
 import NotFound from "./pages/NotFound";
+import NFCScanPage from "./pages/NFCScanPage";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/pay" element={<PaymentPage />} />
+          <Route path="/scan" element={<NFCScanPage />} />
           <Route path="/owner/*" element={<OwnerDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

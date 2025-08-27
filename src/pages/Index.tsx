@@ -1,91 +1,222 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
-import NFCScanner from '@/components/scanner/NFCScanner'; 
-import PaymentModal from '@/components/payment/PaymentModal';
-import ReceiptNFT from '@/components/receipt/ReceiptNFT';
 import { ConnectWallet } from '@/components/wallet/ConnectWallet';
 import { PaymentContractTest } from '@/components/debug/PaymentContractTest';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
-import { Settings } from 'lucide-react';
+import { GlassCard } from '@/components/ui/glass-card';
+import { Badge } from '@/components/ui/badge';
+import { NFCTagManager } from '@/utils/nfcTagManager';
+import { 
+  Settings, 
+  Smartphone, 
+  Zap, 
+  Wifi, 
+  Shield, 
+  Chrome,
+  WifiOff,
+  CheckCircle,
+  AlertTriangle,
+  QrCode
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const Index = () => {
-  const [currentStep, setCurrentStep] = useState<'scan' | 'payment' | 'receipt'>('scan');
-  const [productData, setProductData] = useState<any>(null);
-  const [receiptData, setReceiptData] = useState<any>(null);
+  const [nfcSupport, setNfcSupport] = useState(() => NFCTagManager.checkNFCSupport());
 
-  const handleScanComplete = (data: any) => {
-    setProductData(data);
-    setCurrentStep('payment');
-  };
+  // Re-check NFC support periodically
+  useEffect(() => {
+    const checkSupport = () => {
+      setNfcSupport(NFCTagManager.checkNFCSupport());
+    };
+    
+    const interval = setInterval(checkSupport, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const handlePaymentComplete = (receipt: any) => {
-    setReceiptData(receipt);
-    setCurrentStep('receipt');
-  };
+  const renderNFCStatus = () => (
+    <GlassCard className="p-4 mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-text-primary">WebNFC Status</h3>
+        <Badge variant={nfcSupport.isSupported ? 'default' : 'destructive'}>
+          {nfcSupport.isSupported ? 'Ready' : 'Not Available'}
+        </Badge>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="flex items-center space-x-2">
+          <Shield className={cn("w-3 h-3", nfcSupport.isSecureContext ? "text-status-success" : "text-status-error")} />
+          <span>HTTPS</span>
+          <span className={cn(nfcSupport.isSecureContext ? "text-status-success" : "text-status-error")}>
+            {nfcSupport.isSecureContext ? '✓' : '✗'}
+          </span>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Chrome className={cn("w-3 h-3", nfcSupport.isChrome ? "text-status-success" : "text-status-error")} />
+          <span>Chrome</span>
+          <span className={cn(nfcSupport.isChrome ? "text-status-success" : "text-status-error")}>
+            {nfcSupport.isChrome ? '✓' : '✗'}
+          </span>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Smartphone className={cn("w-3 h-3", nfcSupport.isMobile ? "text-status-success" : "text-status-error")} />
+          <span>Mobile</span>
+          <span className={cn(nfcSupport.isMobile ? "text-status-success" : "text-status-error")}>
+            {nfcSupport.isMobile ? '✓' : '✗'}
+          </span>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Wifi className={cn("w-3 h-3", nfcSupport.isSupported ? "text-status-success" : "text-status-error")} />
+          <span>WebNFC</span>
+          <span className={cn(nfcSupport.isSupported ? "text-status-success" : "text-status-error")}>
+            {nfcSupport.isSupported ? '✓' : '✗'}
+          </span>
+        </div>
+      </div>
+      
+      {!nfcSupport.isSupported && nfcSupport.reason && (
+        <div className="mt-3 p-2 bg-status-warning/10 rounded-md">
+          <p className="text-xs text-status-warning">{nfcSupport.reason}</p>
+        </div>
+      )}
+    </GlassCard>
+  );
 
-  const handleReceiptClose = () => {
-    setCurrentStep('scan');
-    setProductData(null);
-    setReceiptData(null);
-  };
+  const renderTapToBuy = () => (
+    <div className="space-y-6">
+      {/* Main Tap to Buy Section */}
+      <GlassCard className="p-8 text-center" glow={nfcSupport.isSupported}>
+        <div className={cn(
+          "mx-auto w-24 h-24 rounded-full flex items-center justify-center mb-6 transition-all duration-500",
+          nfcSupport.isSupported 
+            ? "bg-gradient-cta animate-pulse" 
+            : "bg-surface-700"
+        )}>
+          {nfcSupport.isSupported ? (
+            <Smartphone className="w-12 h-12 text-white" />
+          ) : (
+            <WifiOff className="w-12 h-12 text-text-tertiary" />
+          )}
+        </div>
+        
+        <h2 className="text-2xl font-bold text-text-primary mb-2">
+          {nfcSupport.isSupported ? "Tap to Buy" : "Scan to Buy"}
+        </h2>
+        
+        <p className="text-text-secondary mb-6">
+          {nfcSupport.isSupported 
+            ? "Simply tap your phone near any NFC-enabled product to buy instantly with blockchain receipts"
+            : "WebNFC not available - use QR code scanning instead"
+          }
+        </p>
+        
+        <Link to="/scan">
+          <FuturisticButton 
+            variant="primary" 
+            size="lg"
+            className="w-full text-lg font-bold py-4"
+          >
+            {nfcSupport.isSupported ? (
+              <>
+                <Zap className="w-6 h-6 mr-3" />
+                Tap to Buy
+              </>
+            ) : (
+              <>
+                <QrCode className="w-6 h-6 mr-3" />
+                Scan to Buy
+              </>
+            )}
+          </FuturisticButton>
+        </Link>
+        
+        {nfcSupport.isSupported && (
+          <div className="mt-6 flex items-center justify-center space-x-4 text-sm text-text-tertiary">
+            <div className="flex items-center space-x-2">
+              <Shield className="w-4 h-4 text-status-success" />
+              <span>Secure Payments</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-4 h-4 text-status-success" />
+              <span>Instant Receipts</span>
+            </div>
+          </div>
+        )}
+      </GlassCard>
 
-  const handlePaymentClose = () => {
-    setCurrentStep('scan');
-    setProductData(null);
-  };
+      {/* Demo Products Preview */}
+      <GlassCard className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-text-primary">Available Products</h3>
+          <Badge variant="secondary" className="text-xs">
+            Demo Ready
+          </Badge>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          {NFCTagManager.getAllProducts().slice(0, 4).map(product => (
+            <div key={product.productId} className="p-3 bg-surface-700/30 rounded-lg border border-glass-1 hover:border-accent-cyan/50 transition-colors">
+              <div className="font-medium text-text-primary text-sm mb-1">{product.name}</div>
+              <div className="text-accent-cyan text-lg font-bold">{NFCTagManager.formatPrice(product.price)}</div>
+              <div className="text-text-tertiary text-xs mt-1">{product.description}</div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-4 text-center">
+          <p className="text-xs text-text-tertiary">
+            {nfcSupport.isSupported 
+              ? "Tap your device near any NFC tag to purchase" 
+              : "QR codes available for non-NFC devices"
+            }
+          </p>
+        </div>
+      </GlassCard>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-surface-900 noise-texture">
       <div className="container mx-auto px-4 py-6 max-w-md">
         <Header 
-          title="TapLink dePOS" 
+          title="TapLink NFC dePOS" 
           subtitle="Tap to buy. Proof in hand."
           userRole="customer"
         />
         
-        <main className="animate-fade-in">
-          {currentStep === 'scan' && (
-            <div className="space-y-4">
-              {/* Wallet Connection Section */}
-              <ConnectWallet />
-              
-              {/* Payment Contract Test */}
-              <PaymentContractTest />
-              
-              <NFCScanner onScanComplete={handleScanComplete} />
-              
-              {/* Owner Dashboard Access */}
-              <div className="text-center">
-                <Link to="/owner">
-                  <FuturisticButton variant="ghost" size="sm">
-                    <Settings className="w-4 h-4 mr-2 flex-shrink-0" />
-                    <span className="leading-none">Shop Owner Dashboard</span>
-                  </FuturisticButton>
-                </Link>
-              </div>
-            </div>
-          )}
+        <main className="animate-fade-in space-y-6">
+          {/* Wallet Connection */}
+          <ConnectWallet />
+          
+          {/* NFC Status */}
+          {renderNFCStatus()}
+          
+          {/* Tap to Buy */}
+          {renderTapToBuy()}
+          
+          {/* Payment Contract Test */}
+          <PaymentContractTest />
+          
+          {/* Owner Dashboard Access */}
+          <div className="text-center pt-4">
+            <Link to="/owner">
+              <FuturisticButton variant="ghost" size="sm">
+                <Settings className="w-4 h-4 mr-2" />
+                Shop Owner Dashboard
+              </FuturisticButton>
+            </Link>
+          </div>
         </main>
-
-        {/* Payment Modal */}
-        {currentStep === 'payment' && productData && (
-          <PaymentModal
-            isOpen={true}
-            onClose={handlePaymentClose}
-            productData={productData}
-            onPaymentComplete={handlePaymentComplete}
-          />
-        )}
-
-        {/* Receipt NFT Modal */}
-        {currentStep === 'receipt' && receiptData && (
-          <ReceiptNFT
-            receiptData={receiptData}
-            onClose={handleReceiptClose}
-          />
-        )}
+      </div>
+      
+      {/* Background Elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-20 right-20 w-64 h-64 bg-accent-cyan/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-20 left-20 w-96 h-96 bg-accent-purple/5 rounded-full blur-3xl animate-float-delayed" />
       </div>
     </div>
   );
