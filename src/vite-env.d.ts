@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_KAIA_KAIROS_SYMBOL: string
   readonly VITE_KAIA_KAIROS_EXPLORER: string
   readonly VITE_KRW_CONTRACT_ADDRESS: string
+  readonly VITE_PAYMENT_CONTRACT_ADDRESS: string
   readonly VITE_APP_NAME: string
   readonly VITE_APP_DESCRIPTION: string
 }

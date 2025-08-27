@@ -1,390 +1,267 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { GlassCard } from '@/components/ui/glass-card';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useOwnerDashboard } from '@/hooks/useOwnerDashboard';
+import { formatUnits } from 'viem';
 import { 
   TrendingUp,
   Download,
-  Filter,
   Search,
-  ExternalLink,
   RefreshCw,
-  Calendar,
   Receipt,
   Wallet,
   Package,
-  Clock
+  Home,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Sale {
-  id: string;
-  timestamp: string;
-  tokenId: string;
-  productName: string;
-  productSku: string;
-  buyerWallet: string;
-  amountKRW: number;
-  status: 'pending' | 'confirmed' | 'anchored';
-  receiptCID: string;
-  anchorTxHash?: string;
-  batchId: string;
-}
-
-export const SalesFeed: React.FC = () => {
-  const [sales, setSales] = useState<Sale[]>([
-    {
-      id: 'sale-001',
-      timestamp: '2025-08-27T14:30:00Z',
-      tokenId: 'NFT_ABC123DEF',
-      productName: 'TapLink Tee (Black)',
-      productSku: 'TSHIRT-BLK-M',
-      buyerWallet: '0x742d...5f2a',
-      amountKRW: 25000,
-      status: 'confirmed',
-      receiptCID: 'QmX1Y2Z3...',
-      anchorTxHash: '0xa1b2c3d4...',
-      batchId: 'BATCH42'
-    },
-    {
-      id: 'sale-002',
-      timestamp: '2025-08-27T14:15:00Z',
-      tokenId: 'NFT_GHI456JKL',
-      productName: 'Seoul Coffee Beans',
-      productSku: 'COFFEE-BEAN-100G',
-      buyerWallet: '0x123a...8c9d',
-      amountKRW: 15000,
-      status: 'pending',
-      receiptCID: 'QmA4B5C6...',
-      batchId: 'BATCH43'
-    },
-    {
-      id: 'sale-003',
-      timestamp: '2025-08-27T13:45:00Z',
-      tokenId: 'NFT_MNO789PQR',
-      productName: 'Seoul Pop Mug (Red)',
-      productSku: 'MUG-POP-RED',
-      buyerWallet: '0x456b...1e2f',
-      amountKRW: 18000,
-      status: 'anchored',
-      receiptCID: 'QmD7E8F9...',
-      anchorTxHash: '0xe5f6g7h8...',
-      batchId: 'BATCH44'
-    }
-  ]);
-
+const SalesFeed: React.FC = () => {
+  const { 
+    recentPayments, 
+    totalPayments, 
+    totalRevenue, 
+    isLoading, 
+    error, 
+    refreshData, 
+    lastUpdate,
+    isConnected 
+  } = useOwnerDashboard();
+  
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateRange, setDateRange] = useState({ from: '', to: '' });
-  const [isLiveUpdates, setIsLiveUpdates] = useState(true);
 
-  // Simulate real-time updates
-  useEffect(() => {
-    if (!isLiveUpdates) return;
-    
-    const interval = setInterval(() => {
-      // Simulate new sale or status update
-      if (Math.random() > 0.95) {
-        const newSale: Sale = {
-          id: `sale-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          tokenId: `NFT_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-          productName: 'New Product Sale',
-          productSku: 'NEW-PRODUCT',
-          buyerWallet: `0x${Math.random().toString(16).substr(2, 4)}...${Math.random().toString(16).substr(2, 4)}`,
-          amountKRW: Math.floor(Math.random() * 50000) + 10000,
-          status: 'pending',
-          receiptCID: `Qm${Math.random().toString(36).substr(2, 6)}...`,
-          batchId: 'BATCH45'
-        };
-        
-        setSales(prev => [newSale, ...prev]);
-      }
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [isLiveUpdates]);
-
-  const filteredSales = sales.filter(sale => {
-    const matchesSearch = 
-      sale.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.productSku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.tokenId.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
-
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.amountKRW, 0);
-  const todayRevenue = sales
-    .filter(sale => new Date(sale.timestamp).toDateString() === new Date().toDateString())
-    .reduce((sum, sale) => sum + sale.amountKRW, 0);
-
-  const getStatusConfig = (status: Sale['status']) => {
-    switch (status) {
-      case 'pending':
-        return { label: 'Pending', color: 'bg-status-warning text-surface-900' };
-      case 'confirmed':
-        return { label: 'Confirmed', color: 'bg-accent-cyan text-surface-900' };
-      case 'anchored':
-        return { label: 'Anchored', color: 'bg-status-success text-white' };
-      default:
-        return { label: status, color: 'bg-text-tertiary text-surface-900' };
-    }
+  const formatTimestamp = (timestamp: bigint) => {
+    const date = new Date(Number(timestamp) * 1000);
+    return {
+      date: date.toLocaleDateString(),
+      time: date.toLocaleTimeString(),
+      relative: getRelativeTime(date)
+    };
   };
 
-  const exportSales = () => {
-    // Simulate export
-    console.log('Exporting sales data...');
+  const formatKRW = (amount: bigint) => {
+    const formatted = formatUnits(amount, 18);
+    const num = parseFloat(formatted);
+    return num.toLocaleString('ko-KR', { maximumFractionDigits: 0 });
   };
 
-  const viewReceipt = (sale: Sale) => {
-    // Open receipt modal or new tab
-    console.log('Viewing receipt for sale:', sale.id);
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 8)}...${address.slice(-6)}`;
   };
+
+  const getRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays}d ago`;
+  };
+
+  const filteredPayments = recentPayments.filter(payment =>
+    payment.productId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    payment.buyer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    payment.paymentId.toString().includes(searchTerm)
+  );
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-display text-2xl font-bold text-text-primary">Sales Feed</h2>
-          <p className="text-text-secondary">Real-time transaction monitoring</p>
+          <h2 className="text-2xl font-bold text-text-primary">Sales Feed</h2>
+          <p className="text-text-secondary">
+            Real-time transaction monitoring • Last updated: {new Date(lastUpdate).toLocaleTimeString()}
+          </p>
         </div>
         
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <div className={cn(
-              'w-2 h-2 rounded-full',
-              isLiveUpdates ? 'bg-status-success animate-pulse' : 'bg-text-tertiary'
-            )} />
-            <span className="text-sm text-text-secondary">
-              {isLiveUpdates ? 'Live' : 'Paused'}
+        <div className="flex items-center gap-3">
+          <FuturisticButton
+            variant="secondary"
+            size="sm"
+            onClick={refreshData}
+            disabled={isLoading}
+          >
+            <RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />
+            Refresh
+          </FuturisticButton>
+
+          <Link to="/owner">
+            <FuturisticButton variant="secondary" size="sm">
+              <Home className="w-4 h-4 mr-2" />
+              Dashboard
+            </FuturisticButton>
+          </Link>
+        </div>
+      </div>
+
+      {/* Error State */}
+      {error && (
+        <GlassCard className="p-4 border-status-danger">
+          <div className="flex items-center">
+            <AlertTriangle className="w-5 h-5 text-status-danger mr-2" />
+            <span className="text-status-danger">
+              Error loading sales data: {error}
             </span>
           </div>
-          
-          <FuturisticButton 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setIsLiveUpdates(!isLiveUpdates)}
-          >
-            <RefreshCw className={cn('w-4 h-4', isLiveUpdates && 'animate-spin')} />
-          </FuturisticButton>
-          
-          <FuturisticButton variant="secondary" size="sm" onClick={exportSales}>
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </FuturisticButton>
-        </div>
-      </div>
+        </GlassCard>
+      )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <GlassCard className="p-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-gradient-glow">
-              <TrendingUp className="w-5 h-5 text-accent-cyan" />
-            </div>
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <GlassCard className="p-6">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-text-tertiary">Today's Sales</p>
-              <p className="text-lg font-bold text-text-primary">₩{todayRevenue.toLocaleString()}</p>
-            </div>
-          </div>
-        </GlassCard>
-        
-        <GlassCard className="p-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-gradient-glow">
-              <Receipt className="w-5 h-5 text-accent-cyan" />
-            </div>
-            <div>
-              <p className="text-sm text-text-tertiary">Total Transactions</p>
-              <p className="text-lg font-bold text-text-primary">{sales.length}</p>
-            </div>
-          </div>
-        </GlassCard>
-        
-        <GlassCard className="p-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-gradient-glow">
-              <Clock className="w-5 h-5 text-accent-cyan" />
-            </div>
-            <div>
-              <p className="text-sm text-text-tertiary">Pending</p>
-              <p className="text-lg font-bold text-text-primary">
-                {sales.filter(s => s.status === 'pending').length}
+              <p className="text-text-tertiary text-sm">Total Sales</p>
+              <p className="text-text-primary text-2xl font-bold">
+                {isLoading ? '...' : totalPayments}
               </p>
             </div>
+            <TrendingUp className="w-8 h-8 text-accent-cyan" />
           </div>
         </GlassCard>
-        
-        <GlassCard className="p-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-gradient-glow">
-              <Wallet className="w-5 h-5 text-accent-cyan" />
-            </div>
+
+        <GlassCard className="p-6">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-text-tertiary">Total Revenue</p>
-              <p className="text-lg font-bold text-text-primary">₩{totalRevenue.toLocaleString()}</p>
+              <p className="text-text-tertiary text-sm">Total Revenue</p>
+              <p className="text-text-primary text-2xl font-bold">
+                ₩{isLoading ? '...' : totalRevenue ? parseFloat(totalRevenue).toLocaleString('ko-KR', { maximumFractionDigits: 0 }) : '0'}
+              </p>
             </div>
+            <Wallet className="w-8 h-8 text-accent-cyan" />
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-text-tertiary text-sm">Recent Activity</p>
+              <p className="text-text-primary text-2xl font-bold">
+                {isLoading ? '...' : recentPayments.length}
+              </p>
+            </div>
+            <Package className="w-8 h-8 text-accent-cyan" />
           </div>
         </GlassCard>
       </div>
 
-      {/* Filters */}
-      <GlassCard className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-tertiary" />
+      {/* Controls */}
+      <GlassCard className="p-6">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-tertiary w-4 h-4" />
             <Input
-              placeholder="Search sales..."
+              type="text"
+              placeholder="Search by product ID, buyer, or payment ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
-          
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-surface-700 border border-glass-2 rounded-lg text-text-primary"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="anchored">Anchored</option>
-          </select>
-          
-          {/* Date Range */}
-          <Input
-            type="date"
-            value={dateRange.from}
-            onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
-            className="text-text-primary"
-          />
-          
-          <Input
-            type="date"
-            value={dateRange.to}
-            onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
-            className="text-text-primary"
-          />
         </div>
       </GlassCard>
 
-      {/* Sales Table */}
-      <GlassCard className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-glass-2">
-                <th className="p-4 text-left text-text-secondary text-sm font-medium">Time</th>
-                <th className="p-4 text-left text-text-secondary text-sm font-medium">Product</th>
-                <th className="p-4 text-left text-text-secondary text-sm font-medium">Token ID</th>
-                <th className="p-4 text-left text-text-secondary text-sm font-medium">Buyer</th>
-                <th className="p-4 text-left text-text-secondary text-sm font-medium">Amount</th>
-                <th className="p-4 text-left text-text-secondary text-sm font-medium">Status</th>
-                <th className="p-4 text-left text-text-secondary text-sm font-medium">Receipt</th>
-                <th className="p-4 text-left text-text-secondary text-sm font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSales.map((sale) => {
-                const statusConfig = getStatusConfig(sale.status);
-                
-                return (
-                  <tr key={sale.id} className="border-b border-glass-1 hover:bg-glass-1 transition-colors">
-                    <td className="p-4">
+      {/* Sales Feed */}
+      <GlassCard className="p-6">
+        <h3 className="text-xl font-semibold text-text-primary mb-6">
+          Recent Transactions ({filteredPayments.length})
+        </h3>
+
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center justify-between p-6 bg-glass-1 rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <div className="h-12 w-12 bg-glass-2 rounded-lg animate-pulse" />
+                  <div className="space-y-2">
+                    <div className="h-5 w-40 bg-glass-2 rounded animate-pulse" />
+                    <div className="h-4 w-32 bg-glass-2 rounded animate-pulse" />
+                  </div>
+                </div>
+                <div className="text-right space-y-2">
+                  <div className="h-6 w-24 bg-glass-2 rounded animate-pulse" />
+                  <div className="h-5 w-16 bg-glass-2 rounded animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredPayments.length > 0 ? (
+          <div className="space-y-4">
+            {filteredPayments.map((payment) => {
+              const timeData = formatTimestamp(payment.timestamp);
+              
+              return (
+                <div key={payment.paymentId.toString()} className="p-6 bg-glass-1 rounded-lg hover:bg-glass-2 transition-colors border border-glass-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 bg-accent-cyan/20 rounded-lg">
+                        <Receipt className="w-6 h-6 text-accent-cyan" />
+                      </div>
+                      
                       <div>
-                        <p className="text-sm text-text-primary">
-                          {new Date(sale.timestamp).toLocaleDateString()}
+                        <h4 className="font-semibold text-text-primary mb-1">
+                          Payment #{payment.paymentId.toString()}
+                        </h4>
+                        
+                        <p className="text-sm text-text-secondary mb-1">
+                          Product: <span className="font-medium">{payment.productId}</span>
                         </p>
-                        <p className="text-xs text-text-tertiary">
-                          {new Date(sale.timestamp).toLocaleTimeString()}
+                        
+                        <p className="text-sm text-text-secondary">
+                          From: <span className="font-mono">{formatAddress(payment.buyer)}</span>
                         </p>
                       </div>
-                    </td>
+                    </div>
                     
-                    <td className="p-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-lg bg-surface-600 flex items-center justify-center">
-                          <Package className="w-5 h-5 text-text-secondary" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-text-primary">{sale.productName}</p>
-                          <p className="text-sm font-mono text-text-tertiary">{sale.productSku}</p>
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <td className="p-4">
-                      <div className="flex items-center space-x-2">
-                        <code className="text-sm font-mono text-accent-cyan">{sale.tokenId}</code>
-                        <FuturisticButton variant="ghost" size="sm">
-                          <ExternalLink className="w-3 h-3" />
-                        </FuturisticButton>
-                      </div>
-                    </td>
-                    
-                    <td className="p-4">
-                      <code className="text-sm font-mono text-text-secondary">{sale.buyerWallet}</code>
-                    </td>
-                    
-                    <td className="p-4">
-                      <span className="font-semibold text-text-primary">₩{sale.amountKRW.toLocaleString()}</span>
-                    </td>
-                    
-                    <td className="p-4">
-                      <Badge className={statusConfig.color}>
-                        {statusConfig.label}
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-status-success mb-1">
+                        ₩{formatKRW(payment.amount)}
+                      </p>
+                      
+                      <Badge variant="secondary">
+                        Confirmed
                       </Badge>
-                    </td>
-                    
-                    <td className="p-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-1">
-                          <code className="text-xs text-text-tertiary">{sale.receiptCID}</code>
-                        </div>
-                        {sale.anchorTxHash && (
-                          <div className="flex items-center space-x-1">
-                            <span className="text-xs text-status-success">Anchored</span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    
-                    <td className="p-4">
-                      <div className="flex items-center space-x-2">
-                        <FuturisticButton 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => viewReceipt(sale)}
-                        >
-                          <Receipt className="w-4 h-4" />
-                        </FuturisticButton>
-                        <FuturisticButton variant="ghost" size="sm">
-                          <Download className="w-4 h-4" />
-                        </FuturisticButton>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        
-        {filteredSales.length === 0 && (
-          <div className="p-8 text-center">
-            <TrendingUp className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
-            <p className="text-text-secondary">No sales found matching your criteria.</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : !isConnected ? (
+          <div className="text-center py-12">
+            <Wallet className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
+            <h4 className="text-lg font-medium text-text-secondary mb-2">Wallet Not Connected</h4>
+            <p className="text-text-tertiary">
+              Connect your wallet to view real-time sales data
+            </p>
+          </div>
+        ) : searchTerm ? (
+          <div className="text-center py-12">
+            <Search className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
+            <h4 className="text-lg font-medium text-text-secondary mb-2">No Results Found</h4>
+            <p className="text-text-tertiary">
+              No transactions match your search criteria
+            </p>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <Receipt className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
+            <h4 className="text-lg font-medium text-text-secondary mb-2">No Sales Yet</h4>
+            <p className="text-text-tertiary">
+              Transactions will appear here as customers make purchases
+            </p>
           </div>
         )}
       </GlassCard>
     </div>
   );
 };
+
+export default SalesFeed;

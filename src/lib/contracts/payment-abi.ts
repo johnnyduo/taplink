@@ -1,5 +1,5 @@
 export const PAYMENT_CONTRACT_CONFIG = {
-  address: process.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
+  address: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
   abi: [
     {
       "inputs": [

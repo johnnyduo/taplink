@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { GlassCard } from '@/components/ui/glass-card';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { 
@@ -11,7 +11,9 @@ import {
   FileText, 
   Settings, 
   Menu,
-  X
+  X,
+  ArrowLeft,
+  Store
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +65,17 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ isOpen, onToggle }) 
 
           {/* Navigation */}
           <nav className="space-y-2">
+            {/* Back to Store Button */}
+            <Link
+              to="/"
+              className="flex items-center px-3 py-3 rounded-xl transition-all duration-200 group text-text-secondary hover:text-text-primary hover:bg-glass-1 mb-4 border-b border-glass-1"
+            >
+              <ArrowLeft className="w-5 h-5 flex-shrink-0" />
+              {isOpen && (
+                <span className="ml-3 font-medium">Back to Store</span>
+              )}
+            </Link>
+
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (

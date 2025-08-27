@@ -6,6 +6,7 @@ import NFCScanner from '@/components/scanner/NFCScanner';
 import PaymentModal from '@/components/payment/PaymentModal';
 import ReceiptNFT from '@/components/receipt/ReceiptNFT';
 import { ConnectWallet } from '@/components/wallet/ConnectWallet';
+import { PaymentContractTest } from '@/components/debug/PaymentContractTest';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { Settings } from 'lucide-react';
 
@@ -49,6 +50,9 @@ const Index = () => {
             <div className="space-y-4">
               {/* Wallet Connection Section */}
               <ConnectWallet />
+              
+              {/* Payment Contract Test */}
+              <PaymentContractTest />
               
               <NFCScanner onScanComplete={handleScanComplete} />
               
