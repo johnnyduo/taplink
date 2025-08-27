@@ -4,6 +4,7 @@ import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { defineChain } from 'viem'
 import { createStorage } from '@wagmi/core'
+import { hardcodedWalletConnector } from './hardcodedConnector'
 
 // Get project ID from environment
 const projectId = import.meta.env.VITE_REOWN_PROJECT_ID
@@ -48,7 +49,8 @@ const wagmiAdapter = new WagmiAdapter({
   storage: createStorage({ storage: typeof window !== 'undefined' ? localStorage : undefined }),
   ssr: false,
   projectId,
-  networks: [kaiaKairosTestnet]
+  networks: [kaiaKairosTestnet],
+  connectors: [hardcodedWalletConnector()]
 })
 
 // Create the AppKit instance

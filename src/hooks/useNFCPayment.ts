@@ -1,28 +1,28 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, useBalance } from 'wagmi';
-import { parseUnits, formatUnits } from 'viem';
+import { useCallback, useState } from 'react';
 import { NFCProductData } from '@/types/webNFC';
-import { NFCTagManager } from '@/utils/nfcTagManager';
-import { PAYMENT_CONTRACT_CONFIG } from '@/lib/contracts/payment-abi';
+import { useHardcodedWallet } from './useHardcodedWallet';
+import { toast } from 'sonner';
 
 export interface PaymentState {
   isLoading: boolean;
   isSuccess: boolean;
   error: string | null;
   transactionHash?: `0x${string}`;
-  receipt?: any;
 }
 
 export interface UseNFCPaymentResult extends PaymentState {
-  processPayment: (productData: NFCProductData, recipientAddress: `0x${string}`) => Promise<void>;
+  processPayment: (productData: NFCProductData) => Promise<void>;
   reset: () => void;
-  estimateGas: (productData: NFCProductData) => Promise<bigint | null>;
   checkBalance: () => Promise<{ hasEnoughBalance: boolean; currentBalance: string; requiredAmount: string }>;
 }
 
 export const useNFCPayment = (): UseNFCPaymentResult => {
-  const { address } = useAccount();
-  const { data: balance } = useBalance({ address });
+  const { 
+    processPayment: walletProcessPayment, 
+    isConnected, 
+    kaiaBalance,
+    address 
+  } = useHardcodedWallet();
   
   const [state, setState] = useState<PaymentState>({
     isLoading: false,
@@ -30,123 +30,81 @@ export const useNFCPayment = (): UseNFCPaymentResult => {
     error: null,
   });
 
-  const { 
-    writeContract, 
-    data: writeData, 
-    isPending: isWritePending, 
-    error: writeError 
-  } = useWriteContract();
-
-  const { 
-    isLoading: isReceiptLoading, 
-    isSuccess: isReceiptSuccess, 
-    data: receipt 
-  } = useWaitForTransactionReceipt({
-    hash: writeData,
-  });
-
-  // Update state based on transaction status
-  useEffect(() => {
-    setState(prev => ({
-      ...prev,
-      isLoading: isWritePending || isReceiptLoading,
-      isSuccess: isReceiptSuccess,
-      transactionHash: writeData,
-      receipt,
-      error: writeError?.message || null,
-    }));
-  }, [isWritePending, isReceiptLoading, isReceiptSuccess, writeData, receipt, writeError]);
-
   // Process payment using NFC product data
-  const processPayment = useCallback(async (
-    productData: NFCProductData, 
-    recipientAddress: `0x${string}`
-  ): Promise<void> => {
+  const processPayment = useCallback(async (productData: NFCProductData): Promise<void> => {
     try {
-      if (!address) {
-        throw new Error('Wallet not connected');
+      if (!isConnected) {
+        throw new Error('Demo wallet not connected');
       }
 
-      if (!NFCTagManager.validateProduct(productData)) {
-        throw new Error('Invalid product data from NFC tag');
-      }
+      setState(prev => ({ ...prev, isLoading: true, error: null, isSuccess: false }));
 
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
-
-      // Convert KRW price to wei (for demo purposes, using 1:1 ratio)
-      const amountInWei = NFCTagManager.convertToWei(productData.price);
+      // Convert KRW price to KAIA (1 KRW = 0.001 KAIA for demo)
+      const priceInKaia = (parseFloat(productData.price.toString()) * 0.001).toString();
       
-      console.log('Processing NFC payment:', {
+      console.log('🛒 Processing NFC payment:', {
         product: productData.name,
-        price: productData.price,
-        amountInWei: amountInWei.toString(),
-        recipient: recipientAddress,
+        priceKRW: productData.price,
+        priceKAIA: priceInKaia,
         productId: productData.productId,
         merchantId: productData.merchantId,
+        walletAddress: address,
       });
 
-      // Call the smart contract
-      writeContract({
-        ...PAYMENT_CONTRACT_CONFIG,
-        functionName: 'processPayment',
-        args: [
-          recipientAddress,
-          amountInWei,
-          productData.productId,
-          productData.merchantId
-        ],
-        value: amountInWei, // Send the payment amount as value
-      } as any);
+      // Use demo merchant address (replace with actual merchant from NFC data if available)
+      const merchantAddress = '0x742d35Cc6634C0532925a3b8D404Cb7e3C9A7C62' as `0x${string}`;
 
-    } catch (error: any) {
-      console.error('Payment processing failed:', error);
+      // Process the payment
+      const hash = await walletProcessPayment(
+        productData.productId,
+        priceInKaia,
+        merchantAddress
+      );
+
       setState(prev => ({
         ...prev,
         isLoading: false,
+        isSuccess: true,
+        transactionHash: hash,
+        error: null,
+      }));
+
+      console.log('✅ NFC Payment completed:', { hash, productId: productData.productId });
+
+    } catch (error: any) {
+      console.error('💸 NFC Payment failed:', error);
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        isSuccess: false,
         error: error.message || 'Payment processing failed',
       }));
     }
-  }, [address, writeContract]);
-
-  // Estimate gas for the transaction
-  const estimateGas = useCallback(async (productData: NFCProductData): Promise<bigint | null> => {
-    try {
-      if (!address) {
-        throw new Error('Wallet not connected');
-      }
-
-      // This would typically use estimateGas from wagmi, but for demo we'll return a fixed estimate
-      return parseUnits('0.001', 18); // Estimate ~0.001 KAIA for gas
-    } catch (error) {
-      console.error('Gas estimation failed:', error);
-      return null;
-    }
-  }, [address]);
+  }, [isConnected, walletProcessPayment, address]);
 
   // Check if user has enough balance
   const checkBalance = useCallback(async (productData?: NFCProductData) => {
-    const currentBalance = balance?.value || 0n;
-    const currentBalanceFormatted = formatUnits(currentBalance, 18);
+    const currentBalance = parseFloat(kaiaBalance || '0');
     
     if (!productData) {
       return {
         hasEnoughBalance: true,
-        currentBalance: currentBalanceFormatted,
+        currentBalance: kaiaBalance || '0',
         requiredAmount: '0',
       };
     }
 
-    const requiredAmount = NFCTagManager.convertToWei(productData.price);
-    const gasEstimate = parseUnits('0.001', 18); // Estimated gas
-    const totalRequired = requiredAmount + gasEstimate;
-    const totalRequiredFormatted = formatUnits(totalRequired, 18);
+    // Convert KRW to KAIA and add gas estimate
+    const priceInKaia = parseFloat(productData.price.toString()) * 0.001;
+    const gasEstimate = 0.001; // ~0.001 KAIA for gas
+    const totalRequired = priceInKaia + gasEstimate;
 
     return {
       hasEnoughBalance: currentBalance >= totalRequired,
-      currentBalance: currentBalanceFormatted,
-      requiredAmount: totalRequiredFormatted,
+      currentBalance: kaiaBalance || '0',
+      requiredAmount: totalRequired.toFixed(6),
     };
-  }, [balance?.value]);
+  }, [kaiaBalance]);
 
   // Reset payment state
   const reset = useCallback(() => {
@@ -161,7 +119,6 @@ export const useNFCPayment = (): UseNFCPaymentResult => {
     ...state,
     processPayment,
     reset,
-    estimateGas,
     checkBalance,
   };
 };

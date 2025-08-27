@@ -1,9 +1,11 @@
-import React from 'react';
-import { useWallet } from '@/hooks/useWallet';
+import React, { useCallback } from 'react';
+import { useConnect, useDisconnect, useAccount, useBalance, useReadContract, useWriteContract } from 'wagmi';
+import { formatEther, parseEther } from 'viem';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Badge } from '@/components/ui/badge';
 import { KRWFaucet } from './KRWFaucet';
+import { toast } from 'sonner';
 import { 
   Wallet, 
   ChevronDown, 
@@ -15,33 +17,128 @@ import {
   Shield,
   TrendingUp,
   Globe,
-  CheckCircle
+  CheckCircle,
+  Coins
 } from 'lucide-react';
 
 export const ConnectWallet: React.FC = () => {
-  const {
-    isConnected,
-    formattedAddress,
-    networkName,
-    balance,
-    balanceLoading,
-    krwBalance,
-    krwBalanceLoading,
-    isKaiaTestnet,
-    connect,
-    disconnect,
-    copyAddress,
-    openExplorer
-  } = useWallet();
+  const { isConnected, address } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+  
+  // Use wagmi's useBalance for KAIA balance
+  const { data: kaiaBalance, isLoading: kaiaLoading, refetch: refetchKaia } = useBalance({
+    address,
+  });
 
+  // Use wagmi's useReadContract for KRW token balance
+  const { data: krwBalance, isLoading: krwLoading, refetch: refetchKRW } = useReadContract({
+    address: import.meta.env.VITE_KRW_CONTRACT_ADDRESS as `0x${string}`,
+    abi: [
+      {
+        name: 'balanceOf',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'account', type: 'address' }],
+        outputs: [{ name: '', type: 'uint256' }]
+      }
+    ],
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address,
+    }
+  });
+
+  // Refresh balances function
+  const refreshBalances = useCallback(() => {
+    refetchKaia();
+    refetchKRW();
+  }, [refetchKaia, refetchKRW]);
+
+  // Local state
   const [copied, setCopied] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isClaimingFaucet, setIsClaimingFaucet] = React.useState(false);
+
+  // KRW Faucet contract interaction
+  const { writeContract: claimFaucet } = useWriteContract();
+
+  // Claim faucet function
+  const handleClaimFaucet = useCallback(async () => {
+    if (!address) return;
+    
+    setIsClaimingFaucet(true);
+    const toastId = toast.loading('🚰 Claiming test tokens...', {
+      description: 'Getting 10,000 KRW tokens for testing'
+    });
+    
+    try {
+      claimFaucet({
+        address: import.meta.env.VITE_KRW_CONTRACT_ADDRESS as `0x${string}`,
+        abi: [
+          {
+            name: 'faucet',
+            type: 'function',
+            stateMutability: 'nonpayable',
+            inputs: [
+              { name: 'to', type: 'address' },
+              { name: 'amount', type: 'uint256' }
+            ],
+            outputs: []
+          }
+        ],
+        functionName: 'faucet',
+        args: [address, parseEther('10000')]
+      });
+      
+      toast.success('🎉 Test tokens claimed!', {
+        id: toastId,
+        description: 'Tokens will appear shortly'
+      });
+      
+      // Refresh balances after a delay
+      setTimeout(() => {
+        refreshBalances();
+      }, 3000);
+      
+    } catch (error: any) {
+      console.error('Failed to claim faucet:', error);
+      toast.error('Failed to claim tokens', {
+        id: toastId,
+        description: error.message
+      });
+    } finally {
+      setIsClaimingFaucet(false);
+    }
+  }, [address, claimFaucet, refreshBalances]);
+
+  // Auto-connect to our hardcoded wallet on mount
+  React.useEffect(() => {
+    if (!isConnected && connectors.length > 0) {
+      const demoConnector = connectors.find(c => c.id === 'hardcoded-demo-wallet');
+      if (demoConnector) {
+        connect({ connector: demoConnector });
+      }
+    }
+  }, [connect, connectors, isConnected]);
 
   const handleCopyAddress = async () => {
-    const success = await copyAddress();
-    if (success) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    if (address) {
+      try {
+        await navigator.clipboard.writeText(address);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (error) {
+        console.error('Failed to copy address:', error);
+      }
+    }
+  };
+
+  const handleOpenExplorer = () => {
+    if (address) {
+      const explorerUrl = `https://kairos.kaiascan.io/address/${address}`;
+      window.open(explorerUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -57,10 +154,10 @@ export const ConnectWallet: React.FC = () => {
           
           <div>
             <h3 className="text-display text-lg font-semibold text-text-primary mb-2">
-              Connect Your Wallet
+              Demo Wallet Connecting...
             </h3>
             <p className="text-text-secondary text-sm mb-4">
-              Connect your wallet to make purchases and receive NFT receipts on Kaia Kairos Testnet
+              Initializing hardcoded wallet for Chrome Android NFC testing
             </p>
           </div>
 
@@ -75,24 +172,18 @@ export const ConnectWallet: React.FC = () => {
             </div>
             <div className="text-center p-3 bg-surface-800/30 rounded-lg">
               <Globe className="w-5 h-5 text-primary mx-auto mb-1" />
-              <p className="text-xs text-text-secondary">Testnet</p>
+              <p className="text-xs text-text-secondary">Demo</p>
             </div>
           </div>
 
-          <FuturisticButton 
-            variant="primary" 
-            onClick={connect}
-            className="w-full bg-gradient-to-r from-primary to-accent-cyan hover:from-primary/90 hover:to-accent-cyan/90 transition-all duration-300 wallet-connect-btn"
-          >
-            <Wallet className="w-4 h-4 mr-2 flex-shrink-0" />
-            <span>Connect Wallet</span>
-          </FuturisticButton>
+          <div className="animate-pulse">
+            <div className="h-10 bg-surface-700/50 rounded-lg"></div>
+          </div>
 
           <div className="pt-4 border-t border-surface-700">
             <p className="text-xs text-text-tertiary text-center">
-              Powered by{' '}
-              <span className="text-accent-cyan font-medium">Reown AppKit</span>
-              {' '}• Kaia Network
+              Chrome Android NFC Demo •{' '}
+              <span className="text-accent-cyan font-medium">Kaia Testnet</span>
             </p>
           </div>
         </div>
@@ -114,7 +205,7 @@ export const ConnectWallet: React.FC = () => {
           <div className="text-left">
             <div className="flex items-center space-x-2">
               <p className="text-sm font-semibold text-text-primary">
-                {formattedAddress}
+                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Demo Wallet'}
               </p>
               <Badge className="bg-status-success text-white text-xs px-2 py-0.5 rounded-full">
                 <CheckCircle className="w-3 h-3 mr-1" />
@@ -123,13 +214,11 @@ export const ConnectWallet: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2 mt-0.5">
               <p className="text-xs text-text-secondary">
-                {networkName}
+                Kaia Testnet
               </p>
-              {isKaiaTestnet && (
-                <Badge variant="outline" className="text-xs px-1.5 py-0 border-accent-cyan/30 text-accent-cyan">
-                  Testnet
-                </Badge>
-              )}
+              <Badge variant="outline" className="text-xs px-1.5 py-0 border-accent-cyan/30 text-accent-cyan">
+                Demo
+              </Badge>
             </div>
           </div>
         </div>
@@ -160,7 +249,7 @@ export const ConnectWallet: React.FC = () => {
             <FuturisticButton
               variant="ghost"
               size="sm"
-              onClick={openExplorer}
+              onClick={handleOpenExplorer}
               className="flex-1 h-8 px-2"
               title="View on explorer"
             >
@@ -169,11 +258,11 @@ export const ConnectWallet: React.FC = () => {
             <FuturisticButton
               variant="ghost"
               size="sm"
-              onClick={connect}
+              onClick={refreshBalances}
               className="flex-1 h-8 px-2"
-              title="Wallet settings"
+              title="Refresh balances"
             >
-              <ChevronDown className="w-3 h-3" />
+              <TrendingUp className="w-3 h-3" />
             </FuturisticButton>
           </div>
 
@@ -184,10 +273,10 @@ export const ConnectWallet: React.FC = () => {
               <div className="flex-1">
                 <p className="text-xs text-text-secondary mb-0.5">KAIA Balance</p>
                 <p className="text-base font-bold text-text-primary">
-                  {balanceLoading 
+                  {kaiaLoading 
                     ? 'Loading...' 
-                    : balance 
-                    ? `${balance.formatted} ${balance.symbol}` 
+                    : kaiaBalance
+                    ? `${parseFloat(formatEther(kaiaBalance.value)).toFixed(4)} KAIA`
                     : '0.0000 KAIA'
                   }
                 </p>
@@ -203,11 +292,11 @@ export const ConnectWallet: React.FC = () => {
               <div className="flex-1">
                 <p className="text-xs text-emerald-400 mb-0.5">KRW Balance</p>
                 <p className="text-base font-bold text-text-primary">
-                  {krwBalanceLoading 
+                  {krwLoading 
                     ? 'Loading...' 
-                    : krwBalance 
-                    ? `₩${krwBalance.formatted}` 
-                    : '₩0'
+                    : krwBalance
+                    ? `₩${parseFloat(formatEther(krwBalance as bigint)).toFixed(2)}`
+                    : '₩0.00'
                   }
                 </p>
                 <p className="text-xs text-text-tertiary">
@@ -226,11 +315,14 @@ export const ConnectWallet: React.FC = () => {
             <FuturisticButton 
               variant="secondary" 
               size="sm"
-              onClick={connect}
+              onClick={handleClaimFaucet}
+              disabled={isClaimingFaucet}
               className="flex-1 h-9"
             >
-              <Wallet className="w-4 h-4 mr-1.5 flex-shrink-0" />
-              <span className="text-sm">Manage</span>
+              <Coins className="w-4 h-4 mr-1.5 flex-shrink-0" />
+              <span className="text-sm">
+                {isClaimingFaucet ? 'Claiming...' : 'Claim KRW'}
+              </span>
             </FuturisticButton>
             <FuturisticButton 
               variant="ghost" 
@@ -245,10 +337,13 @@ export const ConnectWallet: React.FC = () => {
 
           {/* KRW Faucet - Compact */}
           <div className="pt-2 border-t border-surface-700/50">
-            <KRWFaucet />
+            <p className="text-xs text-text-tertiary text-center">
+              Demo wallet for Chrome Android NFC testing
+            </p>
           </div>
         </div>
       )}
     </GlassCard>
   );
 };
+
