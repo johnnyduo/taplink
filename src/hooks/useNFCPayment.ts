@@ -21,6 +21,7 @@ export const useNFCPayment = (): UseNFCPaymentResult => {
     processPayment: walletProcessPayment, 
     isConnected, 
     kaiaBalance,
+    krwBalance,
     address 
   } = useHardcodedWallet();
   
@@ -93,27 +94,39 @@ export const useNFCPayment = (): UseNFCPaymentResult => {
 
   // Check if user has enough balance
   const checkBalance = useCallback(async (productData?: NFCProductData) => {
-    const currentBalance = parseFloat(kaiaBalance || '0');
+    const currentKRWBalance = parseFloat(krwBalance || '0');
+    const currentKaiaBalance = parseFloat(kaiaBalance || '0');
     
     if (!productData) {
       return {
         hasEnoughBalance: true,
-        currentBalance: kaiaBalance || '0',
+        currentBalance: krwBalance || '0',
         requiredAmount: '0',
       };
     }
 
-    // Convert KRW to KAIA and add gas estimate
-    const priceInKaia = parseFloat(productData.price.toString()) * 0.001;
-    const gasEstimate = 0.001; // ~0.001 KAIA for gas
-    const totalRequired = priceInKaia + gasEstimate;
+    // Check KRW balance for payment and KAIA balance for gas
+    const requiredKRW = parseFloat(productData.price.toString());
+    const gasEstimateKAIA = 0.001; // ~0.001 KAIA for gas
+    
+    const hasEnoughKRW = currentKRWBalance >= requiredKRW;
+    const hasEnoughKAIA = currentKaiaBalance >= gasEstimateKAIA;
+
+    console.log('💰 Balance check:', {
+      requiredKRW,
+      currentKRWBalance,
+      hasEnoughKRW,
+      gasEstimateKAIA,
+      currentKaiaBalance,
+      hasEnoughKAIA
+    });
 
     return {
-      hasEnoughBalance: currentBalance >= totalRequired,
-      currentBalance: kaiaBalance || '0',
-      requiredAmount: totalRequired.toFixed(6),
+      hasEnoughBalance: hasEnoughKRW && hasEnoughKAIA,
+      currentBalance: `${currentKRWBalance} KRW, ${currentKaiaBalance} KAIA`,
+      requiredAmount: `${requiredKRW} KRW + ${gasEstimateKAIA} KAIA gas`,
     };
-  }, [kaiaBalance]);
+  }, [krwBalance, kaiaBalance]);
 
   // Reset payment state
   const reset = useCallback(() => {

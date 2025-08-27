@@ -126,18 +126,43 @@ export class HardcodedWallet {
       // Convert KRW amount to token units for approval
       const krwTokenAmount = parseEther(krwAmount);
       
-      // Check if product exists, if not add it (for demo purposes)
+      // Force product to be active - always add or reactivate if needed
+      let productNeedsUpdate = false;
+      
       try {
-        console.log('🔍 Checking if product exists in contract...');
-        await this.publicClient.readContract({
+        console.log('🔍 Checking if product exists and is active in contract...');
+        const productInfo = await this.publicClient.readContract({
           ...PAYMENT_CONTRACT_CONFIG,
           functionName: 'getProduct',
           args: [productId]
-        });
-        console.log('✅ Product exists in contract');
+        }) as [string, bigint, bigint, boolean]; // [name, price, stock, active]
+        
+        const [name, price, stock, active] = productInfo;
+        
+        if (name === '') {
+          // Product doesn't exist
+          console.log('➕ Product not found, will add it to contract...');
+          productNeedsUpdate = true;
+        } else if (!active) {
+          // Product exists but is inactive - we'll add it again to force activation
+          console.log('🔄 Product exists but is inactive, will reactivate it...');
+          productNeedsUpdate = true;
+        } else {
+          console.log('✅ Product exists and is active in contract:', {
+            name,
+            price: price.toString(),
+            stock: stock.toString(),
+            active
+          });
+        }
       } catch (productError) {
-        console.log('➕ Product not found, adding it to contract...');
-        // Add the product to the contract
+        console.log('➕ Product check failed, will add it to contract...', productError);
+        productNeedsUpdate = true;
+      }
+      
+      // Add or update the product to ensure it's active
+      if (productNeedsUpdate) {
+        console.log('📝 Adding/updating product to ensure it\'s active...');
         const addProductHash = await this.walletClient.writeContract({
           ...PAYMENT_CONTRACT_CONFIG,
           functionName: 'addProduct',
@@ -151,9 +176,26 @@ export class HardcodedWallet {
             BigInt(100) // stock
           ]
         });
-        console.log('⏳ Waiting for product registration...');
+        console.log('⏳ Waiting for product registration/update...');
         await this.publicClient.waitForTransactionReceipt({ hash: addProductHash });
-        console.log('✅ Product added to contract');
+        console.log('✅ Product is now active in contract');
+        
+        // Verify the product is now active
+        try {
+          const verifyProduct = await this.publicClient.readContract({
+            ...PAYMENT_CONTRACT_CONFIG,
+            functionName: 'getProduct',
+            args: [productId]
+          }) as [string, bigint, bigint, boolean];
+          console.log('✅ Product verification successful - FORCED ACTIVE:', verifyProduct);
+          
+          if (!verifyProduct[3]) { // still not active
+            throw new Error('Failed to force product to active state');
+          }
+        } catch (verifyError) {
+          console.error('❌ Product verification failed:', verifyError);
+          throw new Error('Failed to verify product was activated in contract');
+        }
       }
       
       // Step 1: Approve KRW tokens for the payment contract
@@ -187,13 +229,19 @@ export class HardcodedWallet {
     } catch (error: any) {
       console.error('❌ KRW token payment failed:', error);
       
-      // Better error handling
-      if (error.message.includes('Product not found') || error.message.includes('not exist')) {
+      // Better error handling with KRW-specific messages
+      if (error.message.includes('Product not active') || error.message.includes('not active')) {
+        throw new Error(`Product "${productId}" is not active in the payment contract. Please contact support.`);
+      } else if (error.message.includes('Product not found') || error.message.includes('not exist')) {
         throw new Error(`Product "${productId}" not found in payment contract. Please add it first.`);
       } else if (error.message.includes('insufficient allowance') || error.message.includes('transfer amount exceeds allowance')) {
-        throw new Error('Insufficient KRW token allowance. Please try again.');
+        throw new Error('Insufficient KRW token allowance. The approval transaction may have failed.');
       } else if (error.message.includes('insufficient balance') || error.message.includes('transfer amount exceeds balance')) {
-        throw new Error('Insufficient KRW token balance. Please claim more tokens from the faucet.');
+        throw new Error(`Insufficient KRW token balance. You need ${krwAmount} KRW tokens but may have less. Please claim more tokens from the faucet.`);
+      } else if (error.message.includes('NFC already used') || error.message.includes('already used')) {
+        throw new Error('This NFC tag has already been used for payment. Please use a fresh NFC tag.');
+      } else if (error.message.includes('Out of stock') || error.message.includes('out of stock')) {
+        throw new Error(`Product "${productId}" is out of stock. Please try a different product.`);
       }
       
       throw error;
