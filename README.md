@@ -17,6 +17,9 @@
 
 ## 🌟 Project Overview
 
+<img width="2938" height="2652" alt="screencapture-localhost-8080-2025-08-27-22_45_22 (1)" src="https://github.com/user-attachments/assets/c8690c1a-88d9-40ec-8c04-fa7c8c2e11b8" />
+
+
 **TapLink NFC dePOS** is a next-generation point-of-sale system that bridges physical commerce with Web3 technology. By leveraging the **WebNFC API** on Chrome Android, customers can simply tap NFC-enabled products to initiate instant blockchain payments, receiving cryptographically verifiable NFT receipts.
 
 This isn't just another payment app—it's a **complete commerce infrastructure** that transforms how businesses handle transactions, inventory, and customer relationships through seamless NFC interactions and decentralized technology.
@@ -91,6 +94,8 @@ Explorer: https://kairos.kaiascan.io/address/0xF76Bb2A92d288f15bF17C405Ae715f8d1
 - **Responsive Design**: Seamless experience across all screen sizes
 - **Dark Mode**: Professional low-light interface
 - **Accessibility**: WCAG 2.1 AA compliance
+
+<img width="2938" height="1989" alt="screencapture-localhost-8080-owner-2025-08-27-22_37_33 (1)" src="https://github.com/user-attachments/assets/d83e3024-992c-4455-bba4-3570363b290e" />
 
 ### 🏪 **Merchant Dashboard**
 - **Real-time Analytics**: Live sales tracking with WebSocket updates
