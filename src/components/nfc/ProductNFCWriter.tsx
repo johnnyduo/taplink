@@ -1,6 +1,6 @@
 import React from 'react';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { TAPLINK_PAYMENT_V2_CONFIG } from '@/lib/contracts';
+import { PAYMENT_CONTRACT_CONFIG } from '@/lib/contracts/payment-abi';
 import { FuturisticButton } from '@/components/ui/futuristic-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -99,8 +99,8 @@ export const ProductNFCWriter: React.FC = () => {
 
       // Add product to smart contract
       writeContract({
-        address: TAPLINK_PAYMENT_V2_CONFIG.address,
-        abi: TAPLINK_PAYMENT_V2_CONFIG.abi,
+        address: PAYMENT_CONTRACT_CONFIG.address,
+        abi: PAYMENT_CONTRACT_CONFIG.abi,
         functionName: 'addProduct',
         args: [
           productId,

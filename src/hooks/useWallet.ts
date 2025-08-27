@@ -1,6 +1,7 @@
+import React from 'react';
 import { useAccount, useBalance, useDisconnect, useReadContract } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
-import { KRW_CONTRACT_CONFIG } from '@/lib/contracts';
+import { KRW_CONTRACT_CONFIG } from '@/lib/contracts/krw-abi';
 import { formatUnits } from 'viem';
 
 export const useWallet = () => {
@@ -10,14 +11,23 @@ export const useWallet = () => {
   });
   
   // KRW Token Balance
-  const { data: krwBalance, isLoading: krwBalanceLoading } = useReadContract({
+  const { data: krwBalance, isLoading: krwBalanceLoading, error: krwBalanceError } = useReadContract({
     ...KRW_CONTRACT_CONFIG,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
-    query: {
-      enabled: !!address && isConnected,
-    },
   });
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('💰 Balance Debug:', {
+      address,
+      krwBalance: krwBalance?.toString(),
+      krwBalanceLoading,
+      krwBalanceError,
+      contractAddress: KRW_CONTRACT_CONFIG.address,
+      isConnected
+    });
+  }, [address, krwBalance, krwBalanceLoading, krwBalanceError, isConnected]);
 
   const { disconnect } = useDisconnect();
   const { open } = useAppKit();

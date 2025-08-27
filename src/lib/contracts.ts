@@ -756,11 +756,11 @@ export const KRW_TOKEN_ABI = [
 
 // Contract configurations
 export const TAPLINK_PAYMENT_V2_CONFIG = {
-  address: process.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
+  address: import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS as `0x${string}`,
   abi: TAPLINK_PAYMENT_V2_ABI,
-};
+} as const;
 
-export const KRW_CONTRACT_CONFIG = {
-  address: process.env.VITE_KRW_CONTRACT_ADDRESS as `0x${string}`,
+export const KRW_TOKEN_CONFIG = {
+  address: import.meta.env.VITE_KRW_CONTRACT_ADDRESS as `0x${string}`,
   abi: KRW_TOKEN_ABI,
-};
+} as const;

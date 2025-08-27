@@ -123,3 +123,4 @@ storybook-static/
 
 # Web3 dApp specific
 public/contracts/
+# Keep src/lib/contracts/ tracked for ABI files needed by frontend
