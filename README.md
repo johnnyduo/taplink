@@ -364,9 +364,37 @@ reader.addEventListener('reading', ({ message }) => {
 });
 ```
 
+#### **NFC Scanning & Payment Flow**
+```typescript
+// 1. Scan NFC tag
+const nfcData = await scanNFCTag();
+
+// 2. Parse product data
+const product = parseNFCData(nfcData);
+console.log('Product:', {
+  id: product.productId,
+  name: product.name,
+  price: `${product.price} KRW`,
+  merchant: product.merchantName
+});
+
+// 3. Validate KRW balance
+const balance = await checkKRWBalance(userAddress);
+const hasEnoughBalance = balance >= product.price;
+
+// 4. Process KRW payment
+if (hasEnoughBalance) {
+  // Approve KRW tokens
+  await krwContract.approve(paymentContract, product.price);
+  
+  // Execute tap-to-pay
+  await paymentContract.tapToPay(product.productId, nfcId);
+}
+```
+
 #### Writing NFC Tags
 ```typescript
-const writer = new NDEFReader();
+const reader = new NDEFReader();
 const productData = {
   type: 'product',
   version: '1.0',
@@ -378,7 +406,117 @@ const productData = {
   }
 };
 
-await writer.write(JSON.stringify(productData));
+await reader.write(JSON.stringify(productData));
+```
+
+## 📱 NFC Tag Data Structure
+
+### **Sample NFC Tag Data**
+TapLink uses a structured JSON format for NFC tags that contains all necessary product and payment information:
+
+```json
+{
+  "type": "product",
+  "version": "1.0",
+  "data": {
+    "productId": "1001",
+    "name": "Cap NY",
+    "price": 25000,
+    "currency": "KRW", 
+    "description": "Stylish New York cap for everyday wear",
+    "image": "/products/cap-ny.jpg",
+    "merchantId": "fashion-store-001",
+    "merchantName": "Fashion Store Seoul",
+    "contractAddress": "0x9d5F1273002Cc4DAC76B72249ed59B21Ba41D526",
+    "chainId": 1001,
+    "timestamp": 1724774400000
+  }
+}
+```
+
+### **Demo Products Available**
+The system comes with several pre-configured demo products for testing:
+
+#### **Fashion Store Products**
+```json
+{
+  "productId": "1001",
+  "name": "Cap NY",
+  "price": 25000,
+  "currency": "KRW"
+}
+```
+```json
+{
+  "productId": "hat-baseball-002", 
+  "name": "Baseball Cap",
+  "price": 28000,
+  "currency": "KRW"
+}
+```
+```json
+{
+  "productId": "hat-beanie-003",
+  "name": "Winter Beanie", 
+  "price": 20000,
+  "currency": "KRW"
+}
+```
+
+#### **Cafe Seoul Products**
+```json
+{
+  "productId": "pastry-croissant-004",
+  "name": "Butter Croissant",
+  "price": 15000,
+  "currency": "KRW"
+}
+```
+```json
+{
+  "productId": "sandwich-club-005",
+  "name": "Club Sandwich",
+  "price": 18000,
+  "currency": "KRW"
+}
+```
+
+### **NFC Data Validation**
+The system performs comprehensive validation on NFC tag data:
+
+```typescript
+// Required fields validation
+const isValid = productData.productId && 
+                productData.name && 
+                productData.price > 0 &&
+                productData.merchantId &&
+                productData.contractAddress;
+
+// Data structure validation  
+const isValidStructure = tagData.type === 'product' && 
+                        tagData.version === '1.0' &&
+                        tagData.data !== undefined;
+```
+
+### **NFC Tag Creation Process**
+1. **Product Registration**: Product is added to smart contract with `addProduct()`
+2. **NFC Data Generation**: JSON structure created with product details
+3. **Tag Writing**: Data written to physical NFC tag using WebNFC API
+4. **Validation**: Tag data verified against required schema
+5. **Deployment**: Tag ready for customer tap-to-pay transactions
+
+### **Custom Product Creation**
+```typescript
+const customProduct = NFCTagManager.createProduct(
+  'custom-001',
+  'Custom Product',
+  35000,
+  {
+    description: 'Custom product description',
+    merchantId: 'your-store-001',
+    contractAddress: '0x9d5F1273002Cc4DAC76B72249ed59B21Ba41D526'
+  }
+);
 ```
 
 ### Blockchain Integration
