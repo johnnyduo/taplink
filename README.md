@@ -122,12 +122,16 @@ TapLink introduces the first **NFC-integrated KRW stablecoin** for physical comm
 
 ## 🎯 Key Features
 
+<img width="1200" height="520" alt="image" src="https://github.com/user-attachments/assets/04678c68-8e71-4cf7-a21d-08c3e3872c05" />
+
 ### 🔥 **WebNFC + KRW Stablecoin Integration**
 - **Real NFC Hardware Access**: Direct integration with Chrome's WebNFC API for physical-to-digital commerce
 - **Instant KRW Payments**: Tap to pay with tokenized Korean Won - no currency conversion needed
 - **Tag Reading & Writing**: Automatic product recognition with dynamic NFC tag programming
 - **Permission Management**: Secure NFC access with proper user consent and privacy protection
 - **Fallback Support**: QR code alternatives for non-NFC devices with same KRW payment flow
+
+<img width="279" height="180" alt="image" src="https://github.com/user-attachments/assets/0a40c66e-930e-4448-b760-2aca01c13323" />
 
 ### 💳 **KRW Stablecoin-Powered Payments**
 - **Native Korean Won**: Blockchain-native KRW stablecoin with 1:1 parity for seamless commerce
