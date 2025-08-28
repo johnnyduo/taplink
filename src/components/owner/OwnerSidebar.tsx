@@ -120,7 +120,7 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ isOpen, onToggle }) 
                   <span className="text-white font-bold text-sm">CS</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-text-primary truncate">Cafe Seoul</p>
+                  <p className="font-medium text-text-primary truncate">Cap Cafe Seoul</p>
                   <p className="text-xs text-text-tertiary">Active Store</p>
                 </div>
               </div>
