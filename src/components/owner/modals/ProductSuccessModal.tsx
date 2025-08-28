@@ -28,6 +28,13 @@ export const ProductSuccessModal: React.FC<ProductSuccessModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
 
+  // Reset copied state when modal closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setCopied(false);
+    }
+  }, [isOpen]);
+
   const copyToClipboard = async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -42,9 +49,23 @@ export const ProductSuccessModal: React.FC<ProductSuccessModalProps> = ({
     window.open(explorerUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const handleClose = () => {
+    console.log('🔄 ProductSuccessModal: Close button clicked');
+    setCopied(false); // Reset any internal state
+    onClose();
+  };
+
+  // Force modal to close when escape key is pressed
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      handleClose();
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" onKeyDown={handleKeyDown}>
         <DialogHeader className="pb-6">
           <div className="flex items-center space-x-3 mb-2">
             <div className="p-2 rounded-full bg-green-500/10">
@@ -102,7 +123,7 @@ export const ProductSuccessModal: React.FC<ProductSuccessModalProps> = ({
             </FuturisticButton>
             <FuturisticButton
               variant="primary"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 h-12 text-sm"
             >
               <CheckCircle className="w-4 h-4 mr-2" />

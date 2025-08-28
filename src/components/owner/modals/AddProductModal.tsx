@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -86,6 +86,9 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     transactionHash: string;
     explorerUrl: string;
   } | null>(null);
+
+  // Track if we've already processed this transaction success
+  const processedTransactionRef = useRef<string | null>(null);
 
   // Contract interaction hooks - SIMPLIFIED like ProductNFCWriter
   const { address, isConnected, connector } = useAccount();
@@ -184,9 +187,12 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     }
   }, [receiptError]);
 
-  // Handle successful contract transaction - FIXED to prevent double execution
+  // Handle successful contract transaction - FIXED to prevent infinite loop
   useEffect(() => {
-    if (isSuccess && hash && !showSuccessModal) {
+    if (isSuccess && hash && hash !== processedTransactionRef.current) {
+      // Mark this transaction as processed
+      processedTransactionRef.current = hash;
+      
       const explorerUrl = `${import.meta.env.VITE_KAIA_KAIROS_EXPLORER}/tx/${hash}`;
       
       console.log('✅ Product added to blockchain successfully!');
@@ -229,7 +235,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setShowSuccessModal(true);
       onAdd(productData);
     }
-  }, [isSuccess, hash, showSuccessModal]);
+  }, [isSuccess, hash]); // Clean dependencies without showSuccessModal
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -426,6 +432,11 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   };
 
   const handleClose = () => {
+    console.log('🔄 AddProductModal: Main modal closing - resetting all state');
+    
+    // Reset transaction processing ref
+    processedTransactionRef.current = null;
+    
     // Reset form state with a small delay to prevent Select rendering issues
     setTimeout(() => {
       setFormData({
@@ -458,12 +469,16 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   };
 
   const handleSuccessModalClose = () => {
-    // First close the success modal
+    console.log('🔄 AddProductModal: Success modal close requested - navigating back to inventory');
+    
+    // Close the success modal first
     setShowSuccessModal(false);
     setSuccessData(null);
     
-    // Then close the main modal gracefully
-    handleClose(); // Use the existing handleClose which properly resets everything
+    // Then close the main modal to return to inventory
+    setTimeout(() => {
+      handleClose();
+    }, 100);
   };
 
   const addTag = () => {
@@ -1165,6 +1180,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     />
 
     <ProductSuccessModal
+      key={showSuccessModal ? 'success-modal-open' : 'success-modal-closed'}
       isOpen={showSuccessModal}
       onClose={handleSuccessModalClose}
       productName={successData?.productName || formData.name}
