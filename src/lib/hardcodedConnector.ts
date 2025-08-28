@@ -1,6 +1,6 @@
 import { createConnector } from 'wagmi';
 import { privateKeyToAccount } from 'viem/accounts';
-import { createWalletClient, http } from 'viem';
+import { createWalletClient, createPublicClient, http } from 'viem';
 
 // Create a custom connector for our hardcoded wallet
 export function hardcodedWalletConnector() {
@@ -111,7 +111,58 @@ export function hardcodedWalletConnector() {
     },
 
     async getProvider() {
-      return null; // AppKit will use the default provider
+      // Create a custom EIP-1193 provider that handles signing
+      const privateKeyRaw = import.meta.env.VITE_DEMO_WALLET_PRIVATE_KEY;
+      if (!privateKeyRaw) {
+        throw new Error('Demo wallet private key not configured');
+      }
+
+      const privateKey = privateKeyRaw.startsWith('0x') 
+        ? privateKeyRaw as `0x${string}`
+        : `0x${privateKeyRaw}` as `0x${string}`;
+
+      const account = privateKeyToAccount(privateKey);
+      
+      // Find the Kaia testnet chain
+      const kaiaChain = config.chains.find(chain => chain.id === 1001);
+      if (!kaiaChain) {
+        throw new Error('Kaia testnet chain not found in config');
+      }
+
+      // Create a wallet client that can sign transactions
+      const walletClient = createWalletClient({
+        account,
+        chain: kaiaChain,
+        transport: http('https://public-en-kairos.node.kaia.io')
+      });
+
+      // Return an EIP-1193 compatible provider
+      return {
+        async request({ method, params }: any) {
+          if (method === 'eth_sendTransaction') {
+            // Use the wallet client to send the transaction
+            const [txRequest] = params;
+            const hash = await walletClient.sendTransaction(txRequest);
+            return hash;
+          }
+          
+          if (method === 'eth_accounts') {
+            return [account.address];
+          }
+          
+          if (method === 'eth_chainId') {
+            return `0x${kaiaChain.id.toString(16)}`;
+          }
+          
+          // For other methods, use the public client
+          const publicClient = createPublicClient({
+            chain: kaiaChain,
+            transport: http('https://public-en-kairos.node.kaia.io')
+          });
+          
+          return await publicClient.transport.request({ method, params });
+        }
+      };
     },
   }));
 }

@@ -141,7 +141,11 @@ export const InventoryManager: React.FC = () => {
     }
   ]);
 
-  const categories = Array.from(new Set(products.map(p => p.category)));
+  const categories = Array.from(new Set(
+    products
+      .map(p => p.category)
+      .filter(cat => cat && cat.trim() !== '') // Filter out empty/falsy categories
+  ));
 
   // Filter products based on search and filters
   const filteredProducts = useMemo(() => {
