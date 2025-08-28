@@ -28,7 +28,8 @@ const SalesFeed: React.FC = () => {
     totalRevenue, 
     isLoading, 
     error, 
-    refreshData, 
+    refresh,
+    refreshTransactions,
     lastUpdate,
     isConnected 
   } = useOwnerDashboard();
@@ -105,11 +106,20 @@ const SalesFeed: React.FC = () => {
           <FuturisticButton
             variant="secondary"
             size="sm"
-            onClick={refreshData}
+            onClick={refresh}
             disabled={isLoading}
           >
             <RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />
             Refresh
+          </FuturisticButton>
+
+          <FuturisticButton
+            variant="secondary"
+            size="sm"
+            onClick={refreshTransactions}
+            disabled={isLoading}
+          >
+            🔍 API Test
           </FuturisticButton>
 
           <Link to="/owner">

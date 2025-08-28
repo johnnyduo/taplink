@@ -89,9 +89,20 @@ const DashboardHome: React.FC = () => {
     isLoading, 
     error, 
     refreshData, 
+    fetchPaymentEvents,
     lastUpdate,
     isConnected 
   } = useOwnerDashboard();
+
+  // Debug function to test event fetching
+  const testEventFetching = async () => {
+    console.log('🔍 Manual test of contract payment fetching triggered');
+    if (fetchPaymentEvents) {
+      await fetchPaymentEvents();
+    } else {
+      refreshData();
+    }
+  };
 
   const formatTimestamp = (timestamp: bigint) => {
     const date = new Date(Number(timestamp) * 1000);
@@ -135,6 +146,16 @@ const DashboardHome: React.FC = () => {
           {!isConnected && (
             <Badge variant="destructive">Wallet Not Connected</Badge>
           )}
+          
+          {/* Debug button for testing event fetching */}
+          <FuturisticButton
+            variant="secondary"
+            size="sm"
+            onClick={testEventFetching}
+            className="border-accent-blue text-accent-blue"
+          >
+            🔍 Test Events
+          </FuturisticButton>
           
           <FuturisticButton
             variant="secondary"

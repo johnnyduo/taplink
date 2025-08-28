@@ -1,0 +1,298 @@
+import React from 'react';
+import { useAccount, useReadCont      // For each payment, try to find the transaction hash from events
+      const currentBlock = await publicClient.getBlockNumber();
+      // Expand search to last 100,000 blocks to find older payments (events are around block 194,666,000)
+      const fromBlock = currentBlock > 100000n ? currentBlock - 100000n : 0n;
+
+      console.log('🔍 Searching for transaction hashes in blocks', fromBlock.toString(), '-', currentBlock.toString());
+      console.log('🔍 Expanded search range to find payment events from ~100k blocks ago'); useWatchContractEvent, usePublicClient } from 'wagmi';
+import { PAYMENT_CONTRACT_CONFIG } from '@/lib/contracts/payment-abi';
+import { formatUnits } from 'viem';
+
+export interface PaymentEvent {
+  paymentId: bigint;
+  buyer: string;
+  productId: string;
+  amount: bigint;
+  nfcId: string;
+  timestamp: bigint;
+  transactionHash?: string;
+}
+
+export interface DashboardStats {
+  totalPayments: number;
+  totalRevenue: string;
+  recentPayments: PaymentEvent[];
+  isLoading: boolean;
+  error?: string;
+}
+
+export const useOwnerDashboard = () => {
+  const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
+  const [recentPayments, setRecentPayments] = React.useState<PaymentEvent[]>([]);
+  const [lastUpdate, setLastUpdate] = React.useState<number>(Date.now());
+  const [isLoadingEvents, setIsLoadingEvents] = React.useState(false);
+
+  // Fetch historical payment events with transaction hashes
+  const fetchPaymentEvents = React.useCallback(async () => {
+    if (!publicClient || !PAYMENT_CONTRACT_CONFIG.address) return;
+
+    setIsLoadingEvents(true);
+    try {
+      console.log('🔍 Fetching payment data from contract...');
+      console.log('📍 Contract address:', PAYMENT_CONTRACT_CONFIG.address);
+      
+      // Use getRecentPayments function since it works and contains the data
+      // @ts-ignore - Temporary fix for readContract type issue
+      const recentPaymentsData = await publicClient.readContract({
+        address: PAYMENT_CONTRACT_CONFIG.address,
+        abi: PAYMENT_CONTRACT_CONFIG.abi,
+        functionName: 'getRecentPayments',
+      }) as [bigint[], `0x${string}`[], string[], bigint[], bigint[]];
+
+      console.log('📊 Contract returned:', recentPaymentsData);
+
+      const [paymentIds, buyers, productIds, amounts, timestamps] = recentPaymentsData;
+
+      if (!paymentIds || paymentIds.length === 0) {
+        console.log('ℹ️ No payments found');
+        setRecentPayments([]);
+        return;
+      }
+
+      console.log('✅ Found', paymentIds.length, 'payments in contract');
+
+      // For each payment, try to find the transaction hash from events
+      const currentBlock = await publicClient.getBlockNumber();
+      const fromBlock = currentBlock > 10000n ? currentBlock - 10000n : 0n;
+
+      console.log('� Searching for transaction hashes in blocks', fromBlock.toString(), '-', currentBlock.toString());
+
+      // Find PaymentProcessed event ABI from the contract
+      const paymentProcessedEvent = PAYMENT_CONTRACT_CONFIG.abi.find(
+        (item) => item.type === 'event' && item.name === 'PaymentProcessed'
+      );
+
+      let eventLogs: any[] = [];
+      if (paymentProcessedEvent) {
+        try {
+          console.log('🔍 Fetching PaymentProcessed events with ABI:', paymentProcessedEvent.name);
+          
+          eventLogs = await publicClient.getLogs({
+            address: PAYMENT_CONTRACT_CONFIG.address,
+            event: paymentProcessedEvent,
+            fromBlock,
+            toBlock: 'latest',
+          });
+          console.log('📊 Found', eventLogs.length, 'PaymentProcessed events with transaction hashes');
+          
+          if (eventLogs.length > 0) {
+            console.log('🔍 Sample event log:', {
+              transactionHash: eventLogs[0].transactionHash,
+              blockNumber: eventLogs[0].blockNumber?.toString(),
+              paymentId: eventLogs[0].args?.paymentId?.toString()
+            });
+          }
+        } catch (logError) {
+          console.warn('⚠️ Could not fetch event logs for transaction hashes:', logError);
+          
+          // Try a more direct approach: search all logs from contract
+          try {
+            console.log('🔄 Trying alternative log search...');
+            const allLogs = await publicClient.getLogs({
+              address: PAYMENT_CONTRACT_CONFIG.address,
+              fromBlock,
+              toBlock: 'latest',
+            });
+            console.log('📊 Found', allLogs.length, 'total logs from contract');
+            
+            // Filter for PaymentProcessed manually
+            eventLogs = allLogs.filter(log => {
+              // PaymentProcessed event signature
+              const paymentProcessedSig = '0xdfe4b2dbddf6631bfb9023d8c92d16b67a29acb581ee5c0b4a80d10e06cddee6';
+              return (log as any).topics && (log as any).topics[0] === paymentProcessedSig;
+            });
+            console.log('📊 Filtered to', eventLogs.length, 'PaymentProcessed events');
+          } catch (altError) {
+            console.warn('⚠️ Alternative log search also failed:', altError);
+          }
+        }
+      } else {
+        console.warn('⚠️ PaymentProcessed event not found in ABI');
+      }
+
+      // Process the payment data
+      const eventsWithTxHash = paymentIds.map((paymentId, index) => {
+        // Try to find matching event log for this payment ID
+        const matchingLog = eventLogs.find(log => 
+          log.args.paymentId?.toString() === paymentId.toString()
+        );
+
+        return {
+          paymentId,
+          buyer: buyers[index],
+          productId: productIds[index],
+          amount: amounts[index],
+          nfcId: `nfc-${paymentId.toString()}`, // Default since not in getRecentPayments
+          timestamp: timestamps[index],
+          transactionHash: matchingLog?.transactionHash, // This is the explorer link we want!
+        };
+      });
+
+      // Sort by payment ID (most recent first)
+      eventsWithTxHash.sort((a, b) => Number(b.paymentId) - Number(a.paymentId));
+
+      setRecentPayments(eventsWithTxHash);
+      console.log('✅ Payment events loaded:', eventsWithTxHash);
+
+    } catch (error) {
+      console.error('❌ Failed to fetch payment data:', error);
+      console.error('🔍 Error details:', {
+        message: error.message,
+        code: error.code,
+        contractAddress: PAYMENT_CONTRACT_CONFIG.address
+      });
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  }, [publicClient]);
+  const { 
+    data: paymentCounter, 
+    isLoading: paymentCounterLoading,
+    error: paymentCounterError,
+    refetch: refetchPaymentCounter 
+  } = useReadContract({
+    ...PAYMENT_CONTRACT_CONFIG,
+    functionName: 'paymentCounter',
+  });
+
+  // Get recent payments data
+  const { 
+    data: recentPaymentsData, 
+    isLoading: recentPaymentsLoading,
+    error: recentPaymentsError,
+    refetch: refetchRecentPayments 
+  } = useReadContract({
+    ...PAYMENT_CONTRACT_CONFIG,
+    functionName: 'getRecentPayments',
+  });
+
+  // Load historical events on mount
+  React.useEffect(() => {
+    if (isConnected && publicClient) {
+      console.log('🔄 Hook mounted, fetching events...');
+      fetchPaymentEvents();
+    }
+  }, [isConnected, publicClient, fetchPaymentEvents]);
+
+  // Log recentPayments changes for debugging
+  React.useEffect(() => {
+    console.log('📊 Recent payments updated:', {
+      count: recentPayments.length,
+      hasTransactionHashes: recentPayments.filter(p => p.transactionHash).length,
+      sample: recentPayments[0]
+    });
+  }, [recentPayments]);
+
+  // Watch for new payment events in real-time
+  useWatchContractEvent({
+    ...PAYMENT_CONTRACT_CONFIG,
+    eventName: 'PaymentProcessed',
+    onLogs: (logs) => {
+      console.log('🎉 New Payment Event:', logs);
+      
+      // Add new payments to the list
+      const newPayments = logs.map(log => ({
+        paymentId: log.args.paymentId as bigint,
+        buyer: log.args.buyer as string,
+        productId: log.args.productId as string,
+        amount: log.args.amount as bigint,
+        nfcId: log.args.nfcId as string,
+        timestamp: BigInt(Math.floor(Date.now() / 1000)),
+        transactionHash: log.transactionHash,
+      }));
+
+      setRecentPayments(prev => [...newPayments, ...prev].slice(0, 20)); // Keep latest 20
+      setLastUpdate(Date.now());
+      
+      // Refresh contract data
+      refetchPaymentCounter();
+      refetchRecentPayments();
+    },
+  });
+
+  // Process recent payments data from contract (fallback if events fail)
+  React.useEffect(() => {
+    if (recentPaymentsData && recentPayments.length === 0 && !isLoadingEvents) {
+      console.log('📋 Using fallback contract data:', recentPaymentsData);
+      
+      const [paymentIds, buyers, productIds, amounts, timestamps] = recentPaymentsData as [
+        readonly bigint[],
+        readonly string[],
+        readonly string[],
+        readonly bigint[],
+        readonly bigint[]
+      ];
+
+      console.log('📊 Processing contract data:', {
+        paymentIds: paymentIds.map(id => id.toString()),
+        buyers,
+        productIds,
+        amounts: amounts.map(amt => amt.toString()),
+        timestamps: timestamps.map(ts => ts.toString())
+      });
+
+      const payments: PaymentEvent[] = paymentIds.map((id, index) => ({
+        paymentId: id,
+        buyer: buyers[index],
+        productId: productIds[index],
+        amount: amounts[index],
+        nfcId: '', // NFC ID not returned by getRecentPayments, would need individual payment lookup
+        timestamp: timestamps[index],
+        // No transaction hash available from getRecentPayments
+      }));
+
+      console.log('✅ Setting fallback payments:', payments.length);
+      setRecentPayments(payments);
+    }
+  }, [recentPaymentsData, recentPayments.length, isLoadingEvents]);
+
+  // Calculate total revenue
+  const totalRevenue = React.useMemo(() => {
+    if (!recentPayments.length) return '0';
+    
+    const total = recentPayments.reduce((sum, payment) => sum + payment.amount, BigInt(0));
+    return formatUnits(total, 18);
+  }, [recentPayments]);
+
+  // Manual refresh function
+  const refreshData = React.useCallback(() => {
+    refetchPaymentCounter();
+    refetchRecentPayments();
+    fetchPaymentEvents(); // Also refresh the events with transaction hashes
+    setLastUpdate(Date.now());
+  }, [refetchPaymentCounter, refetchRecentPayments, fetchPaymentEvents]);
+
+  // Auto-refresh every 30 seconds
+  React.useEffect(() => {
+    const interval = setInterval(refreshData, 30000);
+    return () => clearInterval(interval);
+  }, [refreshData]);
+
+  const dashboardStats: DashboardStats = {
+    totalPayments: paymentCounter ? Number(paymentCounter) : 0,
+    totalRevenue,
+    recentPayments,
+    isLoading: paymentCounterLoading || recentPaymentsLoading || isLoadingEvents,
+    error: paymentCounterError?.message || recentPaymentsError?.message,
+  };
+
+  return {
+    ...dashboardStats,
+    refreshData,
+    fetchPaymentEvents, // Expose for testing
+    lastUpdate,
+    isConnected,
+  };
+};
